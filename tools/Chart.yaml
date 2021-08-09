@@ -1,0 +1,10 @@
+apiVersion: v1
+name: k8s-dev-tools
+version: 0.0.1
+description: DevTools Core Chart
+home: 
+sources:
+maintainers:
+  - name: Georgi Dimitrov
+    email: gogodi91@gmail.com
+  - name: Ravindra Bhadti

@@ -1,0 +1,81 @@
+################ COMPONENT CONTROLS ################
+global:
+  tools:
+    ldap:
+      enable: true
+    sonarqube:
+      enable: false
+      postgresql: false
+      elasticsearch: false
+    jenkinsMaster:
+      enable: true
+    nginx:
+      enable: true
+    nexus:
+      enable: false
+    gerrit:
+      enable: false
+      postgresql: false
+    extras:
+      enable: false
+  jenkinsNamespace:
+    create: false
+
+################ Sonar MYSQL ################
+sonarmysql:
+  mysqlRootPassword:
+  existingSecret: sonar-mysql
+  mysqlUser: sonar
+  service:
+    port: "3306"
+  mysqlAllowEmptyPassword: false
+  mysqlDatabase: sonardb
+  persistence:
+    storageClass:
+  imagePullPolicy: IfNotPresent
+  ssl:
+    certificates:      
+
+  hostname: sonar-mysql
+################ Sonar PostgreSQL ################
+sonarPostgresSecret:
+  rootPassword:
+  rootUsername:
+  rootDBName: sonardb
+
+sonarqube-postgresql:
+  service:
+    internalPort: "5432"
+    externalPort: "5432"
+
+################ Gerrit MYSQL ################
+gerritmysql:
+  fullnameOverride: gerrit-mysql
+  mysqlRootPassword:
+  existingSecret: gerrit-mysql
+  mysqlUser: gerrit
+  service:
+    port: "3306"
+  mysqlAllowEmptyPassword: false
+  mysqlDatabase: gerritdb
+  persistence:
+    storageClass:
+  imagePullPolicy: IfNotPresent
+
+  configurationFiles:
+    mysql.cnf: |-
+      [mysqld]
+      sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+
+  hostname: gerrit-mysql
+
+################ Gerrit PostgreSQL ################
+gerritPostgresSecret:
+  rootPassword:
+  rootUsername:
+  rootDBName: gerritdb
+
+gerrit-postgresql:
+  service:
+    internalPort: "5432"
+    externalPort: "5432"
