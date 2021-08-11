@@ -1,0 +1,7 @@
+apiVersion: v1
+name: nginx
+description: "nginx"
+version: 0.1.0
+keywords:
+  - nginx
+  - reverse-proxy

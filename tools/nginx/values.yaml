@@ -1,0 +1,31 @@
+name: nginx
+
+Image:
+  Name: gogodi91/nginx
+  Tag: "1.17.7"
+  pullPolicy: "Always"
+  containerPorts:
+    http: 8080
+    https: 8443
+
+service:
+  internalPort: 8080
+  externalPort: 80
+  relativePath: '/'
+  annotations:
+
+persistence:
+  enabled: false
+
+tools:
+  enable:
+    nexus: false
+    jenkinsMaster: false
+    sonarqube: false
+    gerrit: false
+
+ingress:
+  host: ""
+  annotations:
+    ingress.kubernetes.io/rewrite-target: /
+    ingress.kubernetes.io/whitelist-source-range: 0.0.0.0/0

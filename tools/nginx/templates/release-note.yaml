@@ -1,0 +1,1349 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: release-note
+  labels:
+    app: {{ template "nginx.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+#################################################
+################### PLUGINS #####################
+#################################################
+  plugins.json: |-
+    {
+        "core" : [
+            {
+                "type": "Tool Links",
+                "components" : [
+  {{- if .Values.global.tools.jenkinsMaster.enable }}
+                    {
+                        "id": "jenkins",
+                        "title": "jenkins",
+                        "img": "img/jenkins.svg",
+                        "description": "Continuous Integration & Automation Server",
+                        "link": "/jenkins/"
+                    },
+  {{- end }}
+  {{- if .Values.global.tools.extras.enable }}
+                    {
+                        "id": "gitlab",
+                        "title": "gitlab",
+                        "img": "img/gitlab.png",
+                        "description": "Git Repository Manager",
+                        "link": "/gitlab/"
+                    },
+  {{- end }}
+
+  {{- if .Values.global.tools.gerrit.enable }}
+                    {
+                        "id": "gerrit",
+                        "title": "gerrit",
+                        "img": "img/gitlab.png",
+                        "description": "Git Repository Manager",
+                        "link": "/gerrit/"
+                    },
+  {{- end }}
+
+  {{- if .Values.global.tools.sonarqube.enable }}
+                    {
+                        "id": "sonar",
+                        "title": "sonar",
+                        "img": "img/sonarqube.svg",
+                        "description": "Static Code Analysis",
+                        "link": "/sonarqube/"
+                    },
+  {{- end }}
+  {{- if .Values.global.tools.nexus.enable }}
+                    {
+                        "id": "nexus",
+                        "title": "nexus",
+                        "img": "img/nexus.png",
+                        "description": "Software Repository Manager",
+                        "link": "/nexus/"
+                    },
+  {{- end }}
+  {{- if .Values.global.tools.extras.enable }}
+                    {
+                        "id": "kibana",
+                        "title": "kibana",
+                        "img": "img/kibana.png",
+                        "description": "Kibana Dashboard for Logging (ELK)",
+                        "link": "/app/kibana"
+                    },
+  {{- end }}
+  {{- if .Values.global.tools.extras.enable }}
+                    {
+                        "id": "selenium",
+                        "title": "selenium",
+                        "img": "img/selenium.png",
+                        "description": "Selenium Grid for Automated Testing",
+                        "link": "",
+                        "linkCreate": {
+                            "host": "selenium",
+                            "endPath": "//grid/console"
+                        }
+                    },
+  {{- end }}
+  {{- if .Values.global.tools.extras.enable }}
+                    {
+                        "id": "sensu",
+                        "title": "sensu",
+                        "img": "img/sensu.png",
+                        "description": "Monitoring",
+                        "link": "/sensu/"
+                    },
+  {{- end }}
+  {{- if .Values.global.tools.extras.enable }}
+                    {
+                        "id": "ldap-ltb",
+                        "title": "ltb",
+                        "img": "img/ltb.png",
+                        "description": "Application that allows users to change their password in an LDAP directory",
+                        "link": "/ldap-ltb/"
+                    },
+  {{- end }}
+                    {
+                        "id": "ldap-phpadmin",
+                        "title": "phpldapadmin",
+                        "img": "img/phpldapadmin.svg",
+                        "description": "Browser to manage your LDAP server",
+                        "link": "/phpldapadmin/"
+                    }
+                ]
+            }
+        ],
+        "blueprints": [
+            {"url": "bp/demo-release-note.html"}
+        ]
+    }
+
+#################################################
+################### INDEX #######################
+#################################################
+  index.html: |-
+    <!DOCTYPE html>
+    <html lang="en" ng-app="rnApp">
+        <head>
+            <title>DevOps Platform</title>
+            <meta charset="utf-8"> 
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">      
+            <link rel="shortcut icon" href="favicon.png">
+            <!--[if lt IE 9]>
+                <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+            <![endif]-->
+            <!-- Latest compiled and minified CSS -->
+            <link href='https://fonts.googleapis.com/css?family=Roboto+Condensed|Open+Sans+Condensed:300' rel='stylesheet' type='text/css'>
+            <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+            <link rel="stylesheet" type="text/css" href="css/style.css">
+        </head>
+        
+      <body ng-controller="mainController as mainCtrl">
+          <nav id="myNavbar" class="navbar navbar-inverse" role="navigation">
+                <!-- Brand and toggle get grouped for better mobile display -->
+                <div class="container-fluid">
+                    <div class="navbar-header">
+                        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbarCollapse">
+                            <span class="sr-only">Toggle navigation</span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                        </button>
+                        <a class="navbar-brand" rel="home" href="#" title="DevOps Platform">
+                            DevOps Platform
+                        </a>
+                      
+                                        
+                    </div>
+                    
+                </div>
+            </nav>
+          
+            <div id="header" class="container-fluid nopadding">
+                <!--<img src="img/devops-bg1.jpg" style="width:100%">-->
+                <div class="header-cover">
+                    <div class="header-intro">
+                        <h1 class="header-title">
+                            DevOps Dashboard
+                        </h1>                    
+                        
+                    </div>
+
+                    <div class="header-teasers">
+                        <div class="other-info">
+                            This platform can be used for demos, training and to start real projects.<br />
+                        </div>
+                    </div>
+                </div>           
+
+            </div>
+                
+            <div class="container-fluid nopadding">
+                
+                <div id="core">
+                    <div ng-repeat="linkitem in mainCtrl.core">
+                        <component-list></component-list>
+                    </div>
+                </div>
+              
+                <div id="blueprints">
+                    <div ng-repeat="code in codeJSON">
+                        <ng-include src="code.url"></ng-include> <!-- includes the url from the object, which has the property url.-->
+                        <hr ng-hide="$last" class="blueprint-separator">
+                    </div>                
+                </div>
+                          
+            </div>
+            <footer class="container-fluid">
+                DevOps Platform
+            </footer>
+          
+    <!--        scripts start-->
+            <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.15/angular.min.js"></script>
+            <script src="js/appRN.js"></script>
+            
+            <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+            <script> jQuery.noConflict(); </script>
+            <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+                            
+    <!--        scripts end-->        
+      </body>
+    </html>
+
+#################################################
+################### 50x #########################
+#################################################
+  50x.html: |-
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <title>Error</title>
+    <style>
+        body {
+            width: 35em;
+            margin: 0 auto;
+            font-family: Tahoma, Verdana, Arial, sans-serif;
+        }
+    </style>
+    </head>
+    <body>
+    <h1>An error occurred.</h1>
+    <p>Sorry, the page you are looking for is currently unavailable.<br/>
+    Please try again later.</p>
+    <p>If you are the system administrator of this resource then you should check
+    the <a href="http://nginx.org/r/error_log">error log</a> for details.</p>
+    <p><em>Faithfully yours, nginx.</em></p>
+    </body>
+    </html>
+
+#################################################
+################### BLUEPRINTS ##################
+#################################################
+  blueprints-go-here: |-
+
+
+#################################################
+################### STYLE #######################
+#################################################
+  style.css: |-
+    /*
+    To change this license header, choose License Headers in Project Properties.
+    To change this template file, choose Tools | Templates
+    and open the template in the editor.
+    */
+    /* 
+        Created on : 22-Dec-2015, 13:50:21
+        Author     : silvana.donato
+    */
+    /* 
+        Created on : 30-Dec-2015, 13:34:30
+        Author     : silvana.donato
+    */
+    /* 
+        Created on : 30-Dec-2015, 13:30:11
+        Author     : silvana.donato
+    */
+    /* 
+        Created on : 30-Dec-2015, 13:35:29
+        Author     : silvana.donato
+    */
+    body {
+      background-color: #F5F5F5;
+      font: 16px Helvetica, Arial, sans-serif;
+      color: #5C5C5C; }
+
+    ul, ol {
+      padding: 0; }
+
+    li {
+      list-style-type: none; }
+
+    a {
+      color: #00a000; }
+      a:hover {
+        color: #FF8000;
+        text-decoration: none; }
+      a img {
+        border: none; }
+
+    .nopadding {
+      padding: 0 !important; }
+
+    .container-fluid {
+      padding-right: 2%;
+      padding-left: 2%; }
+
+    /**
+    * HEADER
+    *********/
+    #myNavbar {
+      background-color: #313233;
+      margin-bottom: 0;
+      border-radius: 0; }
+      #myNavbar .navbar-nav > li a {
+        display: block;
+        padding: 35px 15px;
+        border-radius: 0px;
+        color: #F5F5F5;
+        font-size: 16px; }
+        #myNavbar .navbar-nav > li a:hover {
+          background-color: black; }
+      #myNavbar .navbar-header .navbar-brand {
+        height: auto;
+        padding: 15px;
+        color: #F5F5F5;
+        font-size: 24px; }
+        #myNavbar .navbar-header .navbar-brand img {
+          display: inline-block;
+          display: block;
+          height: auto;
+          max-width: 90%; }
+
+    #header {
+      position: relative;
+      height: 200px;
+      overflow: hidden;
+      background-color: #026002; }
+      #header .header-cover {
+        display: block;
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(60, 118, 61, 0.2); }
+        #header .header-cover .header-intro {
+          position: absolute;
+          left: 0px;
+          top: 0px;
+          width: 55%;
+          height: 100%;
+          padding: 2% 8% 2% 4%;
+          background-image: url("../img/cover2.png");
+          background-repeat: no-repeat;
+          background-position-x: right;
+          background-position-y: 0;
+          background-position: right 0; }
+          #header .header-cover .header-intro .header-title {
+            font-family: "Open Sans Condensed", Helvetica, Arial, sans-serif;
+            padding: 1% 0;
+            font-size: 4.4em;
+            font-size: 7.2rem;
+            font-weight: bold;
+            color: white; }
+          #header .header-cover .header-intro .header-button {
+            padding: 13px;
+            background-color: #282928;
+            border-radius: 3px;
+            display: block;
+            width: 50%;
+            text-align: center;
+            text-decoration: none; }
+            #header .header-cover .header-intro .header-button:hover {
+              background-color: #747674; }
+        #header .header-cover .header-teasers {
+          position: absolute;
+          right: 0px;
+          top: 0px;
+          width: 45%;
+          height: 100%;
+          padding-left: 3%; }
+          #header .header-cover .header-teasers .other-info {
+            padding: 7% 2% 0;
+            text-align: left;
+            font-size: 1.1em;
+            font-size: 1.8rem;
+            line-height: 1.8;
+            color: white; }
+            #header .header-cover .header-teasers .other-info a {
+              color: #d1d6da; }
+              #header .header-cover .header-teasers .other-info a:hover {
+                color: #FF8000; }
+
+    /**
+    MAIN CONTENT
+    */
+    /* blocks indicating the status */
+    .bs-callout {
+      position: relative;
+      float: left;
+      width: 15%;
+      min-width: 180px;
+      height: 150px;
+      padding: 0;
+      margin: 0 1.2% 20px 0;
+      border-style: solid;
+      border-width: 2px;
+      border-left-width: 12px;
+      border-radius: 2px;
+      background-color: #ffffff; }
+      .bs-callout a {
+        display: block;
+        width: 100%;
+        height: 92%;
+        overflow: hidden; }
+      .bs-callout code {
+        border-radius: 3px; }
+      .bs-callout.bs-callout-default {
+        border-color: #777; }
+      .bs-callout.bs-callout-primary {
+        border-color: #428bca; }
+      .bs-callout.bs-callout-success {
+        border-color: #5cb85c; }
+      .bs-callout.bs-callout-danger {
+        border-color: #d9534f; }
+      .bs-callout.bs-callout-warning {
+        border-color: #f0ad4e; }
+      .bs-callout.bs-callout-info {
+        border-color: #8f8f8f; }
+
+    /* services - tools */
+    #core {
+      padding: 60px 0;
+      background-color: #ffffff; }
+      #core .services {
+        padding-bottom: 60px;
+        width: 90%;
+        margin: 0 auto; }
+        #core .services:last-child {
+          padding-bottom: 0; }
+        #core .services h1.service-heading {
+          font-family: "Open Sans Condensed", Helvetica, Arial, sans-serif;
+          font-size: 4.1em;
+          font-size: 4.6rem;
+          margin: 0 0 40px; }
+          #core .services h1.service-heading:after {
+            content: " ";
+            display: block;
+            width: 100px;
+            border-bottom: 2px solid #CCC;
+            padding-bottom: 5px; }
+        #core .services a.service {
+          color: #5C5C5C; }
+          #core .services a.service h1 {
+            position: absolute;
+            top: 0;
+            left: 0;
+            box-shadow: 1px 1px 1px 2px rgba(0, 0, 0, 0.2);
+            background-color: #ffffff;
+            margin: 0;
+            padding: 3px 8px;
+            width: 101%;
+            height: 40px;
+            z-index: 100;
+            overflow: hidden;
+            font-size: 22px;
+            line-height: 36px; }
+            #core .services a.service h1 img {
+              width: auto;
+              max-height: 100%;
+              max-width: 98%;
+              vertical-align: initial; }
+            #core .services a.service h1 span {
+              display: none; }
+            #core .services a.service h1.no-image img {
+              display: none; }
+            #core .services a.service h1.no-image span {
+              display: inline; }
+          #core .services a.service div {
+            margin: 55px 8px;
+            font-size: 16px;
+            color: #5C5C5C;
+            line-height: 1.3; }
+
+    /* frameworks - tab panels */
+    .form-horizontal .form-group {
+      margin-right: 0;
+      margin-left: 0; }
+
+    #blueprints {
+      padding: 60px 0;
+      border-top: 3px solid #00a000; }
+      #blueprints .blueprint-separator {
+        width: 100%;
+        margin-top: 40px;
+        margin-bottom: 40px;
+        border-bottom: 1px solid #E0DDDD;
+        box-shadow: 0 1px 2px #E0DDDD, 0 -1px 2px #E0DDDD; }
+      #blueprints .tab-pane-blocks-side1 .tab-pane-blocks-heading {
+        padding-bottom: 10px;
+        font-family: "Open Sans Condensed", Helvetica, Arial, sans-serif;
+        line-height: 0.5; }
+        #blueprints .tab-pane-blocks-side1 .tab-pane-blocks-heading h1 {
+          font-size: 4.1em;
+          font-size: 4.6rem;
+          margin: 0;
+          margin-right: 20px;
+          text-align: right; }
+      #blueprints .tab-pane-blocks-side2 {
+        min-height: 300px;
+        border-left: 1px solid #CCC;
+        padding-left: 70px; }
+
+    /* tabs styling */
+    .nav-pills > li {
+      color: #5C5C5C;
+      border-bottom: 1px solid #CCC;
+      font: 24px Arial, sans-serif; }
+      .nav-pills > li a {
+        color: #5C5C5C;
+        font: 24px Arial, sans-serif; }
+        .nav-pills > li a:hover {
+          color: #FF8000; }
+      .nav-pills > li.active > a, .nav-pills > li.active > a:focus, .nav-pills > li.active > a:hover {
+        color: #5C5C5C;
+        background-color: transparent;
+        border-bottom: 2px solid #00a000; }
+
+    .tab-pane {
+      font-size: 16px;
+      padding: 20px 0; }
+      .tab-pane > ul {
+        padding: 10px 20px; }
+        .tab-pane > ul > li {
+          line-height: 1.8; }
+          .tab-pane > ul > li:before {
+            content: "\e080";
+            font-family: 'Glyphicons Halflings';
+            font-size: 12px;
+            float: left;
+            margin: 4px 20px 0 -14px;
+            color: #CCCCCC; }
+
+    /***
+    * FOOTER
+    *********/
+    footer {
+      padding-top: 20px;
+      padding-bottom: 20px;
+      text-align: left;
+      background-color: #313233;
+      color: #F5F5F5;
+      font-size: 16px; }
+
+    /*correction of row margin*/
+    .row {
+      margin-right: 0px;
+      margin-left: 0px; }
+
+    /****
+    * RESPONSIVE
+    **************/
+    @media screen and (max-width: 1000px) {
+      #header .header-cover .header-intro .header-title {
+        font-family: "Open Sans Condensed", Helvetica, Arial, sans-serif;
+        padding: 4% 0;
+        font-size: 3em;
+        font-size: 5rem; }
+      #header .header-cover .header-teasers .other-info {
+        font-size: 0.9em;
+        font-size: 1.4rem; }
+
+      #core .services {
+        width: 96%; } }
+    @media screen and (max-width: 940px) {
+      #myNavbar .navbar-header {
+        width: 40%; }
+        #myNavbar .navbar-header .navbar-brand {
+          font-size: 12px; }
+      #myNavbar .navbar-nav > li a {
+        font-size: 14px; } }
+    @media screen and (max-width: 860px) {
+      #myNavbar .navbar-header .navbar-brand {
+        font-size: 10px; }
+      #myNavbar .navbar-nav > li a {
+        font-size: 12px; }
+
+      #header {
+        height: 10px; }
+        #header .header-cover .header-intro .header-title {
+          display: none; }
+        #header .header-cover .header-teasers {
+          display: none; }
+
+      #core .services {
+        padding-bottom: 40px;
+        width: 100%; }
+
+      #blueprints .tab-pane-blocks-side1 {
+        width: 100%; }
+        #blueprints .tab-pane-blocks-side1 .tab-pane-blocks-heading h1 {
+          font-size: 2.5em;
+          font-size: 4rem;
+          margin: 0;
+          margin-right: 0;
+          text-align: left; }
+          #blueprints .tab-pane-blocks-side1 .tab-pane-blocks-heading h1:after {
+            content: " ";
+            display: block;
+            width: 80px;
+            border-bottom: 2px solid #CCC;
+            padding-bottom: 5px; }
+      #blueprints .tab-pane-blocks-side2 {
+        border-left: none;
+        width: 90%;
+        padding-left: 15px; } }
+    @media screen and (max-width: 768px) {
+      #myNavbar .navbar-header {
+        width: 100%; }
+        #myNavbar .navbar-header .navbar-brand {
+          font-size: 14px; }
+
+      #core .services h1.service-heading {
+        font-size: 2.5em;
+        font-size: 4rem;
+        margin: 0 0 30px; }
+        #core .services h1.service-heading:after {
+          content: " ";
+          display: block;
+          width: 80px;
+          border-bottom: 2px solid #CCC;
+          padding-bottom: 5px; } }
+
+    /*# sourceMappingURL=style.css.map */
+
+#################################################
+################### STYLE MAP ###################
+#################################################
+  style.css.map: |-
+    {
+    "version": 3,
+    "mappings": "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",
+    "sources": ["../scss/style.scss","../scss/_mixins.scss","../scss/_colors.scss","../scss/_sizes.scss"],
+    "names": [],
+    "file": "style.css"
+    }
+
+#################################################
+################### COMPONENTS ##################
+#################################################
+  component-list.html: |-
+    <div class="services">
+        <div class="row ">                          
+            <div class="col-xs-12 col-md-12">
+                <h1 class="service-heading">{{ `{{linkitem.type}}` }}</h1>
+            </div>
+        </div> 
+        <div class="row ">                               
+            <div class="col-xs-12 col-md-12 services-blocks">
+                <div class="bs-callout bs-callout-info" id = '{{ `{{component.id}}` }}' ng-repeat="component in linkitem.components">                        
+                    <a href ="{{ `{{component.link}}` }}" class="clearfix service" target="_blank">
+                        <h1><img ng-src="{{ `{{component.img || 'none'}}` }}"  err-src title="{{ `{{component.title}}` }}"></h1>
+                        <div>{{ `{{component.description}}` }}</div>
+                    </a>                        
+                </div>                                                  
+            </div>
+        </div>
+    </div> 
+  
+#################################################
+################### APPRN #######################
+#################################################
+  appRN.js: |-
+    (function (ng, window, document, undefined) {
+        'use strict';
+        
+        /* this module allows to execute js code loaded dynamically from the bp */
+        ng.module('ngLoadScript', [])
+            .directive('script', function() {
+                return {
+                    restrict: 'E',
+                    scope: false,
+                    link: function(scope, elem, attr) {
+
+                        if (attr.type === 'text/javascript-lazy') {
+                            var code = elem.text();
+                            var f = new Function(code);
+                            f();
+                        }
+                    }
+                };
+            });
+
+        ng.module('rnApp', ['ngLoadScript'])
+            /* main controller that load the tools and the blueprints */
+            .controller('mainController', ['dataFactory', 'getServicesStatus', '$scope', function(dataFactory, getServicesStatus, $scope){
+                    var controller = this;
+
+                    dataFactory().success(function(data){ 
+                        controller.core = data.core;
+                        $scope.codeJSON = data.blueprints;
+                        controller.core.forEach(function(element, index, array){
+                            generateUrls(element.components);
+                        });
+                        getServicesStatus(controller.core);
+                        setInterval(function(){
+                            getServicesStatus(controller.core);
+                        },10000);
+                    });                
+                }]
+            )
+            /* load the components/tools */
+            .directive('componentList', function(){
+                var app = this;
+                return{
+                    restrict: 'E',
+                    templateUrl: 'dir/component-list.html',
+                    controller: function(){
+                      
+                    }
+                };
+            })
+            /* replace the missing image with text*/
+            .directive('errSrc', function() {
+                return {
+                    restrict: 'A',
+                    link: function(scope, element, attrs) {                                        
+                        element.bind('error', function() {
+                            var parent = element.parent();
+                            if(parent.find("span").length === 0){
+                                var span = ng.element('<span></span>');
+                                span.text(attrs.title);
+                                parent.append(span);
+                            }
+                            parent.addClass("no-image");
+                            
+                        });
+                    }
+                };
+            });
+        
+        /* fetch the data from the descriptor file */
+        ng.module('rnApp').factory('dataFactory', ['$http', function($http){
+            return function () { return $http.get('./plugins.json'); };
+        }]);
+      
+      
+        function generateUrls(data){
+            data.forEach(function(element, index, array){
+                if(element.linkCreate){
+                    element.link = createUrl(element.linkCreate.host) + element.linkCreate.endPath;
+                }
+            });        
+        }
+        
+        function createUrl(host){
+            return "http://"+ host + "." + window.location.host+ (window.location.host.indexOf(".xip.io") > -1 ? "" : ".xip.io/");
+        }
+            
+        function getStatusClass(status,node_status){
+
+            if (status === "passing" && node_status === "passing"){
+                return "bs-callout-success";
+            }else{
+              return "bs-callout-danger";
+            }
+        }
+        /* check the status of the services */
+        ng.module('rnApp').factory('getServicesStatus', ['$http', function($http){
+            return function (components) {     
+            };
+        }]);
+    })(angular, window, document);
+
+#################################################
+################### NPM #########################
+#################################################
+  npm.js: |-
+    // This file is autogenerated via the `commonjs` Grunt task. You can require() this file in a CommonJS environment.
+    require('../../js/transition.js')
+    require('../../js/alert.js')
+    require('../../js/button.js')
+    require('../../js/carousel.js')
+    require('../../js/collapse.js')
+    require('../../js/dropdown.js')
+    require('../../js/modal.js')
+    require('../../js/tooltip.js')
+    require('../../js/popover.js')
+    require('../../js/scrollspy.js')
+    require('../../js/tab.js')
+    require('../../js/affix.js')
+
+#################################################
+################### COLORS ######################
+#################################################
+  _colors.scss: |-
+    /* 
+        Created on : 30-Dec-2015, 13:30:11
+        Author     : silvana.donato
+    */
+
+    $primary-bg-color: #F5F5F5;
+    $secondary-bg-color: #00a000; 
+    $navbar-bg-color: #313233;
+    $button-bg-color: #282928; 
+    $services-bg-color: #ffffff;
+    $header-bg-color: #026002;
+    $header-bg-cover: rgba(60, 118, 61, 0.2);
+    $footer-bg-color: $navbar-bg-color;
+
+    $primary-color: #5C5C5C;
+    $header-color: #F5F5F5;
+    $anchor-color: $secondary-bg-color;
+    $anchor-color-inverse:  #F5F5F5;
+    $anchor-color-header:  rgb(209, 214, 218);
+    $anchor-hover: #FF8000;
+    $panels-color: $primary-color;
+
+    $co-default-color: #777;
+    $co-primary-color: #428bca;
+    $co-success-color: #5cb85c;
+    $co-danger-color: #d9534f;
+    $co-warning-color: #f0ad4e;
+    $co-info-color: lighten($primary-color, 20%);
+
+#################################################
+################### MIXINS ######################
+#################################################
+  _mixins.scss: |-
+    /* 
+        Created on : 30-Dec-2015, 13:34:30
+        Author     : silvana.donato
+    */
+
+    @mixin center-width-block($width){
+        width: $width;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;   
+    }
+    @mixin center-height-block($position: relative){
+        @if $position != false {
+            position: $position;
+        }
+        top: 50%;
+        transform: translateY(-50%);   
+    }
+      
+    @mixin absolute-position($top:auto, $right:auto, $bottom:auto, $left:auto){
+        position: absolute;
+        @if $top != auto { top: $top; }
+        @if $right != auto { right: $right; }
+        @if $bottom != auto { bottom: $bottom; }
+        @if $left != auto { left: $left; }
+    }
+
+#################################################
+################### SIZES #######################
+#################################################
+  _sizes.scss: |-
+    /* 
+        Created on : 30-Dec-2015, 13:35:29
+        Author     : silvana.donato
+    */
+
+    $header-height: 200px;
+    $header-height-small: 10px;
+
+    $blocks-padding-height: 60px;
+    $callout-width: 180px;
+    $callout-height: 150px;
+
+    $font-stack-size: 16px;
+    $font-callout-size: 17px;
+
+#################################################
+################### STYLE #######################
+#################################################
+  style.scss: |-
+    /*
+    To change this license header, choose License Headers in Project Properties.
+    To change this template file, choose Tools | Templates
+    and open the template in the editor.
+    */
+    /* 
+        Created on : 22-Dec-2015, 13:50:21
+        Author     : silvana.donato
+    */
+    @import "mixins";
+    @import "colors";
+    @import "sizes";
+    $font-stack:    Helvetica, Arial, sans-serif;
+    $font-heading: 'Open Sans Condensed', Helvetica, Arial, sans-serif;
+    $header-image: "../img/devops-bg2.jpg";
+    $header-image-cover: "../img/cover2.png";
+    body { 
+        background-color: $primary-bg-color;
+        font: $font-stack-size $font-stack;
+        color: $primary-color;
+    }
+
+    ul, ol{
+        padding: 0;
+    }
+    li {
+        list-style-type: none;
+    }
+    a{
+        color: $anchor-color;
+        &:hover{
+            color: $anchor-hover;
+            text-decoration: none;
+        }
+        img{
+            border: none;
+        }
+    }
+    .nopadding{
+        padding: 0 !important;
+    }
+    .container-fluid {
+        padding-right: 2%;
+        padding-left: 2%;
+    }
+    /**
+    * HEADER
+    *********/
+    #myNavbar{
+        background-color: $navbar-bg-color;
+        margin-bottom: 0;
+        border-radius: 0;
+        .navbar-nav{
+            &>li{
+                a{
+                    display: block;
+                    padding: 35px 15px;                
+                    border-radius: 0px;
+                    color: $anchor-color-inverse;
+                    font-size: $font-stack-size;
+                    &:hover{
+                        background-color: black;
+                    }
+                }
+            }
+        }
+        .navbar-header{        
+            .navbar-brand{
+                height: auto;
+                padding: 15px;
+                color: $anchor-color-inverse;
+                font-size: $font-stack-size + 8;
+                img {
+                    display: inline-block;
+                    display: block;
+                    height: auto;
+                    max-width: 90%;
+                }
+            }
+        }    
+    }
+    #header{
+        position: relative;
+        height: $header-height; 
+        overflow: hidden; 
+        background-color:  $header-bg-color;
+          .header-cover{
+              display: block;
+              position: relative;
+              width: 100%;
+              height: 100%;
+              background-color: $header-bg-cover;    
+              .header-intro{
+                  position: absolute;
+                  left: 0px;
+                  top: 0px;
+                  width: 55%;
+                  height: 100%;
+                  padding: 2% 8% 2% 4%;
+                  background-image:  url($header-image-cover);
+                  background-repeat:   no-repeat;
+                  background-position-x: right;
+                  background-position-y: 0;
+                  background-position: right 0;
+                  .header-title{
+                      font-family: $font-heading;
+                      padding: 1% 0;
+                      font-size: 4.4em;
+                      font-size: 7.2rem;
+                      font-weight: bold;
+                      color: white;
+                  }
+                  .header-button{
+                      padding: 13px;                        
+                      background-color: $button-bg-color;
+                      border-radius: 3px;
+                      display: block;
+                      width: 50%;
+                      text-align: center;
+                      text-decoration: none;
+                      &:hover{ 
+                          background-color: lighten( $button-bg-color, 30% );
+                      }
+                  }
+              }    
+              .header-teasers{
+                  position: absolute;
+                  right: 0px;
+                  top: 0px;
+                  width: 45%;
+                  height: 100%;
+                  padding-left: 3%;
+                  .other-info{
+                      padding: 7% 2% 0;
+                      text-align: left;
+                      font-size: 1.1em;
+                      font-size: 1.8rem;
+                      line-height: 1.8;
+                      color: white;
+                      a{
+                          color: $anchor-color-header; 
+                          &:hover{
+                              color: $anchor-hover;
+                          }
+                      }
+                  }
+              }
+          }
+    }
+    /**
+    MAIN CONTENT
+    */
+    /* blocks indicating the status */
+    .bs-callout {
+        position: relative;
+        float: left;
+        width: 15%;
+        min-width: $callout-width;
+        height: $callout-height;
+        padding: 0;
+        margin: 0 1.2% 20px 0;
+        border-style: solid;
+        border-width: 2px;
+        border-left-width: 12px;
+        border-radius: 2px;
+        background-color: $services-bg-color;
+        a{
+            display: block;
+            width: 100%;
+            height: 92%;
+            overflow: hidden;   
+        }
+        code {
+            border-radius: 3px;
+        }
+        &.bs-callout-default {
+            border-color: $co-default-color;
+        }
+        &.bs-callout-primary {
+            border-color: $co-primary-color;
+        }
+        &.bs-callout-success {
+            border-color: $co-success-color;
+        }
+        &.bs-callout-danger {
+            border-color: $co-danger-color;
+        }
+        &.bs-callout-warning {
+            border-color: $co-warning-color;
+        }
+        &.bs-callout-info {
+            border-color: $co-info-color;
+        }
+    }
+    /* services - tools */
+    #core{
+        padding: $blocks-padding-height 0;
+        background-color: $services-bg-color;    
+        .services{
+            padding-bottom: $blocks-padding-height;
+            width: 90%;
+            margin: 0 auto;
+            &:last-child{
+                padding-bottom: 0;
+            }
+            h1.service-heading{ 
+                font-family: $font-heading;
+                font-size: 4.1em;
+                font-size: 4.6rem;
+                margin: 0 0 40px;
+                &:after{
+                    content: " ";
+                    display: block;
+                    width: 100px;
+                    border-bottom: 2px solid #CCC;
+                    padding-bottom: 5px;
+                }
+            }
+            a.service{
+                color: $primary-color;
+                h1{   
+                    @include absolute-position(0, auto, auto, 0);
+                    box-shadow: 1px 1px 1px 2px rgba(0,0,0, 0.2);
+                    background-color: $services-bg-color; 
+                    margin: 0;
+                    padding: 3px 8px;
+                    width: 101%;
+                    height: 40px;           
+                    z-index: 100;
+                    overflow: hidden;
+                    font-size: 22px;
+                    line-height: 36px;
+                    img{
+                        width: auto; 
+                        max-height: 100%;
+                        max-width: 98%;
+                        vertical-align: initial;
+                    }
+                    span{
+                        display: none;                    
+                    }
+                    &.no-image{
+                        img{
+                            display: none;
+                        }
+                        span{
+                            display: inline;
+                        }
+                    }
+                }
+                div{
+                    margin: 55px 8px;
+                    font-size: $font-stack-size;
+                    color: $primary-color;
+                    line-height: 1.3;
+                }
+            }
+        }
+    }
+    /* frameworks - tab panels */
+    .form-horizontal .form-group {
+        margin-right: 0;
+        margin-left: 0; 
+    }
+    #blueprints{  
+        padding: $blocks-padding-height 0;
+        border-top: 3px solid $secondary-bg-color;
+        .blueprint-separator{
+            width: 100%;
+            margin-top: 40px;
+            margin-bottom: 40px;
+            border-bottom: 1px solid #E0DDDD;    
+            box-shadow: 0 1px 2px #E0DDDD, 0 -1px 2px #E0DDDD;          
+        }
+        .tab-pane-blocks-side1{
+            .tab-pane-blocks-heading{
+                padding-bottom: 10px;
+                font-family: $font-heading; 
+                line-height: 0.5;
+                h1{             
+                    font-size: 4.1em;
+                    font-size: 4.6rem;
+                    margin: 0;
+                    margin-right: 20px;
+                    text-align: right;
+                }
+            }
+        }
+        .tab-pane-blocks-side2{
+            min-height: 300px;
+            border-left: 1px solid #CCC;
+            padding-left: $blocks-padding-height+10;  
+        }
+    }
+    /* tabs styling */
+    .nav-pills > li{
+        color: $panels-color;
+        border-bottom: 1px solid #CCC;
+        font: 24px Arial, sans-serif;
+        a{
+            color: $panels-color;
+            font: 24px Arial, sans-serif;
+            &:hover{
+                color: $anchor-hover;
+            }
+        }
+        &.active{
+            &>a, &>a:focus, &>a:hover{
+                color: $panels-color;
+                background-color: transparent;
+                border-bottom: 2px solid $secondary-bg-color;
+            }
+        }
+    }
+    .tab-pane{
+        font-size: $font-stack-size;
+        padding: 20px 0;
+        &>ul{
+            padding: 10px 20px;
+            &>li{
+                line-height: 1.8;
+                &:before{                        
+                    content: "\e080";
+                    font-family: 'Glyphicons Halflings';
+                    font-size: 12px;
+                    float: left;
+                    margin: 4px 20px 0 -14px;
+                    color: #CCCCCC;
+                }
+            }
+        }     
+    }
+    /***
+    * FOOTER
+    *********/
+    footer{
+        padding-top: 20px;
+        padding-bottom: 20px;
+        text-align: left;
+        background-color: $footer-bg-color;
+        color: $anchor-color-inverse;
+        font-size: $font-stack-size;
+    }
+    /*correction of row margin*/
+    .row {
+        margin-right: 0px;
+        margin-left: 0px; 
+    }
+    /****
+    * RESPONSIVE
+    **************/
+    @media screen  and (max-width: 1199px){  
+    }
+    @media screen  and (max-width: 1000px){
+        #header{    
+            .header-cover{
+                .header-intro{                
+                    .header-title{
+                        font-family: $font-heading;
+                        padding: 4% 0;
+                        font-size: 3em;
+                        font-size: 5rem;
+                    }
+                }            
+                .header-teasers {
+                    .other-info{
+                            font-size: 0.9em;
+                            font-size: 1.4rem; 
+                    }
+                }
+            }
+        }
+        #core{
+            .services{           
+                width: 96%;
+            }
+        }
+    }
+    @media screen and (max-width: 940px){
+        #myNavbar{    
+            .navbar-header{ 
+                width: 40%;
+                .navbar-brand{
+                    font-size: $font-stack-size - 4;
+                }
+            }
+            .navbar-nav{
+                &>li a{
+                    font-size: $font-stack-size - 2;
+                }
+            }  
+        }
+    }
+    @media screen and (max-width: 860px){
+        #myNavbar{    
+            .navbar-header{ 
+                .navbar-brand{
+                    font-size: $font-stack-size - 6;
+                }
+            }
+            .navbar-nav{
+                &>li a{
+                    font-size: $font-stack-size - 4;
+                }
+            }
+        }
+        #header{
+            height: $header-height-small;
+            .header-cover{
+                .header-intro{
+                    .header-title{
+                        display: none;
+                    }                               
+                }            
+                .header-teasers {
+                    display: none;
+                }
+            }
+        }
+        #core{
+            .services{
+                padding-bottom: $blocks-padding-height - 20;
+                width: 100%;
+            }
+        }
+        #blueprints{  
+            .tab-pane-blocks-side1{
+                width: 100%;
+                .tab-pane-blocks-heading{
+                    h1{             
+                        font-size: 2.5em;
+                        font-size: 4rem;
+                        margin: 0;
+                        margin-right: 0;
+                        text-align: left;
+                        &:after{
+                            content: " ";
+                            display: block;
+                            width: 80px;
+                            border-bottom: 2px solid #CCC;
+                            padding-bottom: 5px;
+                        }
+                    }
+                }
+            }
+            .tab-pane-blocks-side2{            
+                border-left: none;
+                width: 90%;
+                padding-left: 15px;
+            }
+        }
+    }
+    @media screen and (max-width: 768px){
+        #myNavbar{    
+            .navbar-header{ 
+                width: 100%;
+                .navbar-brand{
+                    font-size: $font-stack-size - 2;
+                }
+            }        
+        }
+        #core{
+            .services{
+                    h1.service-heading{ 
+                    font-size: 2.5em;
+                    font-size: 4rem;
+                    margin: 0 0 30px;
+                    &:after{
+                        content: " ";
+                        display: block;
+                        width: 80px;
+                        border-bottom: 2px solid #CCC;
+                        padding-bottom: 5px;
+                    }
+                }
+            }
+        }   
+    }
+#################################################
+################### IMAGES ######################
+#################################################
+  {{- (.Files.Glob "img/*.svg").AsConfig | nindent 2 }}
