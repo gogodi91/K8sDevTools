@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sonar-token
+  labels:
+    app: {{ template "jenkins.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  get_sonar_token.sh: |-
+    #!/bin/bash
+    # Create a SonarQube access token and store it in shared volume
+    set -e
+    
+    echo "Generating Sonar Authentication Token"
+
+    pretty_sleep() {
+      secs=${1:-60}
+      tool=${2:-service}
+      while [ $secs -gt 0 ]; do
+        echo -ne "$tool unavailable, sleeping for: $secs\033[0Ks\r"
+        sleep 1
+        : $((secs--))
+      done
+      echo "$tool was unavailable, so slept for: ${1:-60} secs"
+    }
+
+    echo "* Waiting for the Sonar user token api to become available - this can take a few minutes"
+    TOOL_SLEEP_TIME=30
+    TOKEN_DATE=$(date -u +%d/%m/%y-%H:%M)
+    until [[ $(curl -I -s -u "jenkins":"${SONAR_ACCOUNT_PASSWORD}" -X POST ${SONAR_SERVER_URL}api/user_tokens/generate|head -n 1|cut -d$' ' -f2) == 400 ]]; do pretty_sleep ${TOOL_SLEEP_TIME} Sonar; done
+
+    SONAR_TOKEN=$(curl -s -u jenkins:${SONAR_ACCOUNT_PASSWORD} -X POST ${SONAR_SERVER_URL}api/user_tokens/generate?name=jenkins-${TOKEN_DATE})
+
+    echo ${SONAR_TOKEN}
+    SONAR_TOKEN=$(echo ${SONAR_TOKEN} | python -c 'import sys,json; print(json.load(sys.stdin)["token"])')
+    export SONAR_AUTH_TOKEN=${SONAR_TOKEN}
+
+    rm -rf /tmp/sonar_shared_data/sonar.token
+
+    echo "export SONAR_AUTH_TOKEN=${SONAR_AUTH_TOKEN}
+    export SONAR_AUTH_TOKEN_NAME=jenkins-${TOKEN_DATE}
+    export TOKEN_DATE=${TOKEN_DATE}" > /tmp/sonar_shared_data/sonar.token

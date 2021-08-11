@@ -1,0 +1,208 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "jenkins.fullname" . }}
+  labels:
+    app: {{ template "jenkins.name" . }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  replicas: {{ .Values.replicas }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+      release: "{{ .Release.Name }}"
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+        release: "{{ .Release.Name }}"
+        {{- if .Values.global.tools.sonarqube.enable }}
+        integrations: "Sonarqube"
+        {{- else if and (eq .Values.global.tools.sonarqube.enable true) (eq .Values.global.tools.nexus.enable true) }}
+        integrations: "Sonarqube_Nexus"
+        {{- else if .Values.global.tools.nexus.enable }}
+        integrations: "Nexus"
+        {{- else }}
+        integrations: "none"
+        {{- end }}
+    spec:
+      {{- if and (eq .Values.global.jenkinsNamespace.create true) (eq .Values.Slave.enabled true) }}
+      serviceAccountName: jenkins-sa
+      {{- end }}
+      volumes:
+      {{- if .Values.Master.persistence.enabled }}
+      - name: jenkins-pv-storage
+        persistentVolumeClaim:
+          claimName: jenkins-pv-claim
+      {{- end }}
+      # - name: init-groovy
+      #   configMap:
+      #     name: init-groovy
+      - name: init
+        configMap:
+          name: init
+      - name: jenkins-startup
+        configMap:
+          name: jenkins-startup
+      - name: jenkins-casc
+        configMap:
+          name: jenkins-casc
+      {{- if .Values.global.tools.sonarqube.enable }}
+      - name: sonar-token
+        configMap:
+          name: sonar-token
+      {{- end }}
+      - name: load-platform
+        configMap:
+          name: load-platform
+          items:
+            - key: load-platform.xml
+              path: config.xml
+      - name: load-charts
+        configMap:
+          name: load-platform
+          items:
+            - key: load-charts.xml
+              path: config.xml
+      - name: plugin-dir
+        emptyDir: {}
+      - name: sonar-shared-data
+        emptyDir: {}
+      {{- if .Values.Master.persistence.enabled }}
+      - name: jenkins-ssh
+        persistentVolumeClaim:
+          claimName: jenkins-ssh-claim
+      - name: jenkins-ssh-pub
+        persistentVolumeClaim:
+          claimName: jenkins-ssh-pub-claim
+      {{- end}}
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+      initContainers:
+      - name: "init-config"
+        image: "{{ .Values.Master.Image }}:{{ .Values.Master.ImageTag }}"
+        imagePullPolicy: "{{ .Values.Master.ImagePullPolicy }}"
+        command: [ "sh", "/var/jenkins_config/apply_config.sh" ]
+        volumeMounts:
+          - name: init
+            mountPath: /var/jenkins_config
+          {{- if .Values.Master.persistence.enabled }}
+          - name: jenkins-ssh
+            mountPath: /tmp/.ssh
+          - name: jenkins-ssh-pub
+            mountPath: /tmp/public_keys
+          {{- end }}
+          - name: plugin-dir
+            mountPath: /var/jenkins_plugins
+      {{- if .Values.global.tools.sonarqube.enable }}
+      - name: "get-sonar-token"
+        image: "{{ .Values.Master.Image }}:{{ .Values.Master.ImageTag }}"
+        imagePullPolicy: "{{ .Values.Master.ImagePullPolicy }}"
+        command: [ "/bin/bash", "/var/jenkins_config/get_sonar_token.sh" ]
+        env:
+          - name: SONAR_ACCOUNT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: ldap-secret
+                key: jenkins-password
+          - name: SONAR_SERVER_URL
+            value: "{{ .Release.Name }}-sonarqube:9000/sonarqube/"
+        volumeMounts:
+          - name: sonar-token
+            mountPath: /var/jenkins_config
+          - name: sonar-shared-data
+            mountPath: /tmp/sonar_shared_data
+      {{- end }}
+      containers:
+      - name: {{ .Values.Master.Name }}
+        image: {{ .Values.Master.Image }}:{{ .Values.Master.ImageTag }}
+        imagePullPolicy: {{ .Values.Master.ImagePullPolicy }}
+        command: ["/bin/bash", "/var/jenkins_config/startup.sh"]
+        # args: ["bash"]
+        livenessProbe:
+          httpGet:
+            path: /jenkins/login
+            port: http
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /jenkins/login
+            port: http
+          initialDelaySeconds: 10
+        ports:
+        - containerPort: {{ .Values.containerPort }}
+          name: http
+        envFrom:
+        - configMapRef:
+            name: ldap-properties
+        env:
+          - name: CASC_JENKINS_CONFIG
+            value: "/var/jenkins_home/casc/jenkins.yaml"
+          - name: JENKINS_OPTS
+            value: "{{ if .Values.Master.JenkinsUriPrefix }}--prefix={{ .Values.Master.JenkinsUriPrefix }} {{ end }}{{ default "" .Values.Master.JenkinsOpts }}"
+          - name: JAVA_OPTS
+            value: "{{ default "" .Values.Master.JavaOpts }}"
+          - name: LDAP_ENABLED
+            value: "{{ default "" .Values.Master.LDAP.LDAP_ENABLED }}"
+          - name: LDAP_ADMIN
+            valueFrom:
+              secretKeyRef:
+                name: ldap-secret
+                key: ldap-manager-username
+          - name: LDAP_MANAGER_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: ldap-secret
+                key: ldap-password
+          - name: NEXUS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: ldap-secret
+                key: admin-password
+          - name: SONAR_ENABLED
+            value: "true"
+          - name: SONAR_SERVER_URL
+            value: {{ printf "%s-sonarqube:9000/sonarqube/" .Release.Name | trunc 63 | trimSuffix "-" }}
+          - name: SONAR_PLUGIN_VERSION
+            value: ""
+          - name: SONAR_ADDITIONAL_PROPS
+            value: ""
+          - name: SONAR_RUNNER_VERSION
+            value: "{{ default "2.9.0.670" .Values.Master.LDAP.LDAP_ENABLED }}"
+        volumeMounts:
+          - name: jenkins-startup
+            mountPath: /var/jenkins_config
+        {{- if .Values.Master.persistence.enabled }}
+          - name: jenkins-pv-storage
+            mountPath: /var/jenkins_home
+          - name: jenkins-ssh
+            mountPath: /var/jenkins_home/.ssh
+        {{- end }}
+          - name: jenkins-casc
+            mountPath: /var/jenkins_home/casc/
+          # - name: init-groovy
+          #   mountPath: /usr/share/jenkins/ref/init.groovy.d
+          - name: plugin-dir
+            #readOnly: false
+            mountPath: /usr/share/jenkins/ref/plugins/
+          - name: sonar-shared-data
+            mountPath: /tmp/sonar_shared_data/
+          - name: load-platform
+            mountPath: /usr/share/jenkins/ref/jobs/Load_Platform
+            #readOnly: true
+          - name: load-charts
+            mountPath: /usr/share/jenkins/ref/jobs/Load_Charts
+            #readOnly: true
+        resources:
+          requests:
+            cpu: "{{ .Values.Master.resources.requests.CPU }}"
+            memory: "{{ .Values.Master.resources.requests.Memory }}"
+          limits:
+            cpu: "{{ .Values.Master.resources.limits.CPU }}"
+            memory: "{{ .Values.Master.resources.limits.Memory }}"
