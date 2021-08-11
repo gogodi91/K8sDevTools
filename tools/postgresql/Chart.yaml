@@ -1,0 +1,9 @@
+name: postgresql
+description: "PostgreSQL"
+version: 0.1.0
+keywords:
+  - sonarqube
+  - database
+  - gerrit
+  - posgresql
+  - devtools

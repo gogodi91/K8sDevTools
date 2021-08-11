@@ -1,0 +1,38 @@
+replicaCount: 1
+restartPolicy: Always
+
+# Evaluated by the post-install hook
+sleepyTime: "10"
+
+image:
+  repository: postgres
+  tag: 13.1
+  pullPolicy: Always
+  env:
+    POSTGRES_USER:
+    POSTGRES_DB:
+    POSTGRES_INITDB_ARGS:
+    POSTGRES_INITDB_WALDIR:
+    POSTGRES_HOST_AUTH_METHOD:
+    PGDATA: "/var/lib/postgresql/data/pgdata"
+
+service:
+  name: 'postgres-db'
+  internalPort: "5432"
+  externalPort: "5432"
+annotations:
+  
+persistence:
+  enabled: false
+  existingClaim:
+  accessMode: ReadWriteOnce
+  size: 5Gi
+  storageClass:
+
+resources:
+  requests:
+    CPU: "250m"
+    Memory: "256Mi"
+  limits:
+    CPU: "1000m"
+    Memory: "2048Mi"
