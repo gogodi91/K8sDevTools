@@ -1,0 +1,133 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "ldap.fullname" . }}
+  labels:
+    app: {{ template "ldap.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.name }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.name }}
+        release: {{ .Release.Name }}
+    spec:
+      initContainers:
+        - name: ldap-init
+          image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          securityContext:
+            runAsUser: 0
+          command: ["/tmp/init.sh"]
+          volumeMounts:
+            - name: ldap-init-config
+              mountPath: /tmp/init.sh
+              subPath: init.sh
+            - name: ldapconfig
+              mountPath: /etc/ldap
+            - name: ldapdatabase
+              mountPath: /var/lib/ldap
+            - name: ppolicy
+              mountPath: /etc/ldap.dist/modules
+            - name: prepopulate
+              mountPath: /etc/ldap.dist/prepopulate
+          envFrom:
+            - configMapRef:
+                name: ldap-properties
+          env:
+            {{- range $key, $value := .Values.image.env }}
+            - name: {{ $key }}
+              value: {{ $value }}
+            {{- end }}
+            - name: SLAPD_FORCE_RECONFIGURE
+              value: "true"
+            - name: SLAPD_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "ldap-secret"
+                  key: ldap-password
+            - name: INITIAL_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: "ldap-secret"
+                  key: admin-username
+            - name: INITIAL_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "ldap-secret"
+                  key: admin-password
+            - name: JENKINS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "ldap-secret"
+                  key: jenkins-password
+            - name: GERRIT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "ldap-secret"
+                  key: gerrit-password
+      containers:
+      - name: {{ .Values.name }}
+        image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+        livenessProbe:
+          tcpSocket:
+            port: 8389
+          initialDelaySeconds: 20
+          timeoutSeconds: 10
+          failureThreshold: 5
+        readinessProbe:
+          tcpSocket:
+            port: 8389
+          initialDelaySeconds: 20
+        ports:
+          {{- range $key, $value := .Values.image.containerPorts }}
+          - name: {{ $key }}
+            containerPort: {{ $value }}
+          {{- end }}
+        volumeMounts:
+          - name: ldapconfig
+            mountPath: /etc/ldap
+          - name: ldapdatabase
+            mountPath: /var/lib/ldap
+      volumes:
+        - name: ldap-init-config
+          configMap:
+            name: ldap-init
+            defaultMode: 0755
+            items:
+              - key: init.sh
+                path: init.sh
+        - name: ppolicy
+          configMap: 
+            name: {{ .Values.name }}-module-ldifs
+            items:
+              - key: ppolicy.ldif
+                path: ppolicy.ldif
+        - name: prepopulate
+          configMap:
+            name: {{ .Values.name }}-prepopulate-ldifs
+            items:
+              - key: default-ppolicy.ldif
+                path: default-ppolicy.ldif
+              - key: structure.ldif
+                path: structure.ldif
+        - name: ldapconfig
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-ldap
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: ldapdatabase
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-slapd
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

@@ -1,0 +1,112 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "nexus.fullname" . }}
+  labels:
+    app: {{ template "nexus.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 2
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+        release: "{{ .Release.Name }}"
+    spec:        
+      initContainers:
+        - name: nexus-init
+          image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          command: ["sh", "/opt/sonatype/init-nexus-entrypoint.sh"]
+          envFrom:
+            - configMapRef:
+                name: ldap-properties
+          env:
+          {{- range $key, $value := .Values.image.initEnv }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+          {{- end }}
+            - name: LDAP_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: "ldap-secret"
+                  key: "ldap-manager-username"
+            - name: LDAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "ldap-secret"
+                  key: "ldap-password"
+            - name: NEXUS_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "nexus-admin-password"
+                  key: "password"
+          volumeMounts:
+            - name: init-nexus-entrypoint
+              mountPath: "/opt/sonatype/init-nexus-entrypoint.sh"
+              subPath: init-nexus-entrypoint.sh
+            - name: ldap-configuration
+              mountPath: "/opt/sonatype/ldap-config"
+            - name: nexus-data
+              mountPath: "/nexus-data"
+      containers:
+        - name: {{ .Values.name }}
+          image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+          env:
+          {{- range $key, $value := .Values.image.initEnv }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+          {{- end }}
+          volumeMounts:
+          {{- if .Values.persistence.enabled }}
+            - name: nexus-data
+              mountPath: "/nexus-data"
+          {{- end }}
+          ports:
+          {{- range $key, $value := .Values.image.containerPorts }}
+            - name: {{ $key }}
+              containerPort: {{ $value }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: "{{ .Values.image.NexusContext }}"
+              port: 8081
+            initialDelaySeconds: 60
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: "{{ .Values.image.NexusContext }}"
+              port: 8081
+            initialDelaySeconds: 60
+          resources:
+            requests:
+              cpu: "{{ .Values.resources.requests.cpu }}"
+              memory: "{{ .Values.resources.requests.memory }}"
+            limits:
+              cpu: "{{ .Values.resources.limits.cpu }}"
+              memory: "{{ .Values.resources.limits.memory }}"
+      volumes:
+        - name: ldap-configuration
+          configMap:
+            name: init-nexus-ldap
+            defaultMode: 0755
+        - name: nexus-data
+        {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Chart.Name }}
+        {{- else }}
+          emptyDir: {}
+        {{- end}}
+        - name: init-nexus-entrypoint
+          configMap:
+            name: init-nexus
+            defaultMode: 0777
+  

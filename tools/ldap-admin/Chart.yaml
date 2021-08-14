@@ -1,0 +1,7 @@
+name: ldap-admin
+description: "Kube LDAP Admin"
+version: 0.1.0
+keywords:
+  - http
+  - ldap
+  - ldap-phpadmin

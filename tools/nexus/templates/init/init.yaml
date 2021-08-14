@@ -1,0 +1,69 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: init-nexus
+  labels:
+    app: {{ template "nexus.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  init-nexus-entrypoint.sh: |-
+    #!/bin/bash
+    
+    echo ${NEXUS_CONTEXT}
+    if [ "${NEXUS_CONTEXT}" == "/" ]; then
+      export CONTEXT=""
+    else
+      export CONTEXT="/${NEXUS_CONTEXT}"
+    fi
+
+    echo "--------------"
+    echo "NEXUS CONTEXT = ${CONTEXT}"
+    echo "Will be empty if NEXUS_CONTEXT is /"
+    echo "--------------"
+
+    # Start nexus repository manager in the background
+    ${SONATYPE_DIR}/start-nexus-repository-manager.sh 2>&1 &
+    # Wait till nexus is available
+    until $(curl --output /dev/null --silent --head --fail http://localhost:${NEXUS_PORT}${CONTEXT}); do
+      printf "Nexus is starting up...\n"
+      sleep 10
+    done
+    # Obtain Administrative password
+    OLD_ADMIN_PASSWORD=`cat ${NEXUS_DATA}/admin.password`
+    echo "Nexus has started up. Modifying admin password and configuring LDAP"
+    # Admin Password - Read from secret mounted on filesystem
+
+    curl -X PUT -u admin:${OLD_ADMIN_PASSWORD} "http://localhost:${NEXUS_PORT}${CONTEXT}/service/rest/beta/security/users/admin/change-password" -H "accept: application/json" -H "Content-Type: text/plain" -d "${NEXUS_ADMIN_PASSWORD}"
+    echo "Nexus Admin Password Successfully Changed" > ${NEXUS_DATA}/configured.log
+    
+    cp ${LDAP_CONFIGURATION_PATH}/ldap_configuration_schema.json /tmp/ldap_configuration_schema.json
+    # Setup LDAP Integration
+    sed -i'' -e "s/##LDAP_ADMIN_PASSWORD##/${LDAP_ADMIN_PASSWORD}/g" /tmp/ldap_configuration_schema.json
+    sed -i'' -e "s/##LDAP_SERVER##/${LDAP_SERVER}/g" /tmp/ldap_configuration_schema.json
+    sed -i'' -e "s/##LDAP_PORT##/${LDAP_PORT}/g" /tmp/ldap_configuration_schema.json
+    sed -i'' -e "s/##LDAP_ROOTDN##/${LDAP_ROOTDN}/g" /tmp/ldap_configuration_schema.json
+    sed -i'' -e "s/##LDAP_ADMIN_USERNAME##/${LDAP_ADMIN_USERNAME}/g" /tmp/ldap_configuration_schema.json
+    sed -i'' -e "s/##LDAP_USER_BASE_DN##/${LDAP_USER_BASE_DN}/g" /tmp/ldap_configuration_schema.json
+    sed -i'' -e "s/##LDAP_USER_OBJECT_CLASS##/${LDAP_USER_OBJECT_CLASS}/g" /tmp/ldap_configuration_schema.json
+    sed -i'' -e "s/##LDAP_USER_ID_ATTRIBUTE_NAME##/${LDAP_USER_ID_ATTRIBUTE_NAME}/g" /tmp/ldap_configuration_schema.json
+    sed -i'' -e "s/##LDAP_MAIL_ADDRESS_ATTRIBUTE_NAME##/${LDAP_MAIL_ADDRESS_ATTRIBUTE_NAME}/g" /tmp/ldap_configuration_schema.json
+    sed -i'' -e "s/##LDAP_GROUP_BASE_DN##/${LDAP_GROUP_BASE_DN}/g" /tmp/ldap_configuration_schema.json
+    sed -i'' -e "s/##LDAP_GROUPOBJECT_CLASS##/${LDAP_GROUPOBJECT_CLASS}/g" /tmp/ldap_configuration_schema.json
+    sed -i'' -e "s/##LDAP_GROUPMEMBER_ATRRIBUTE_NAME##/${LDAP_GROUPMEMBER_ATRRIBUTE_NAME}/g" /tmp/ldap_configuration_schema.json
+
+
+    cat /tmp/ldap_configuration_schema.json
+    
+    # cat ${LDAP_CONFIGURATION_PATH}/ldap_configuration_schema.json | sed "s/##LDAP_ADMIN_PASSWORD##/${LDAP_ADMIN_PASSWORD}/g" > ${NEXUS_DATA}/ldap_configuration_schema_processed.json
+
+    curl -X POST -u admin:${NEXUS_ADMIN_PASSWORD} http://localhost:${NEXUS_PORT}${CONTEXT}/service/rest/beta/security/ldap -H "Content-Type: application/json" -H "accept: application/json" -d @/tmp/ldap_configuration_schema.json
+    echo "Nexus LDAP Realm Successfully Setup" > ${NEXUS_DATA}/configured.log
+    curl -X POST -u admin:${NEXUS_ADMIN_PASSWORD} http://localhost:${NEXUS_PORT}${CONTEXT}/service/rest/beta/security/roles -H "Content-Type: application/json" -H "accept: application/json" -d @${LDAP_CONFIGURATION_PATH}/ldap_administrator_role_schema.json
+    echo "Nexus LDAP Admin Role Setup" >> ${NEXUS_DATA}/configured.log
+    curl -X POST -u admin:${NEXUS_ADMIN_PASSWORD} http://localhost:${NEXUS_PORT}${CONTEXT}/service/rest/beta/security/roles -H "Content-Type: application/json" -H "accept: application/json" -d @${LDAP_CONFIGURATION_PATH}/ldap_developer_role_schema.json
+    echo "Nexus LDAP Developer Role Setup" >> ${NEXUS_DATA}/configured.log
+    curl -X POST -u admin:${NEXUS_ADMIN_PASSWORD} http://localhost:${NEXUS_PORT}${CONTEXT}/service/rest/beta/security/roles -H "Content-Type: application/json" -H "accept: application/json" -d @${LDAP_CONFIGURATION_PATH}/ldap_deployment_role_schema.json
+    echo "Nexus LDAP Deployment Role Setup" >> ${NEXUS_DATA}/configured.log

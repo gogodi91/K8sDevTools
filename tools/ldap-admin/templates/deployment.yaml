@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "ldapphpadmin.fullname" . }}
+  labels:
+    app: {{ template "ldapphpadmin.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.name }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.name }}
+        release: {{ .Release.Name }}
+    spec:
+      containers:
+      - name: {{ .Values.name }}
+        image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+        imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+        ports:
+          {{- range $key, $value := .Values.image.containerPorts }}
+          - name: {{ $key }}
+            containerPort: {{ $value }}
+          {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /
+            port: {{ .Values.image.containerPorts.http }}
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /
+            port: {{ .Values.image.containerPorts.http }}
+          initialDelaySeconds: 30
+        resources:
+          requests:
+            cpu: "{{ .Values.resources.requests.cpu }}"
+            memory: "{{ .Values.resources.requests.memory }}"
+          limits:
+            cpu: "{{ .Values.resources.limits.cpu }}"
+            memory: "{{ .Values.resources.limits.memory }}"
+        ports:
+          {{- range $key, $value := .Values.image.containerPorts }}
+          - name: {{ $key }}
+            containerPort: {{ $value }}
+          {{- end }}
+        args: ["--copy-service"]
+        env:
+          - name: PHPLDAPADMIN_HTTPS
+            value: "false"
+          - name: PHPLDAPADMIN_LDAP_HOSTS
+            value: {{ .Values.ldap.host | quote }}
+          - name: PHPLDAPADMIN_SERVER_PATH
+            value: {{ .Values.image.ldapAdminContext }}
+        volumeMounts:
+          - name: container-run
+            mountPath: /container/run
+      volumes:
+        - name: container-run
+          emptyDir: {}

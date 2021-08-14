@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sonarqube-init
+  labels:
+    app: {{ template "sonarqube.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  init.sh: |-
+    echo ""
+    echo "##################################################"
+    echo "# Installing required packages"
+    echo "##################################################"
+    apk add --update gettext
+
+    echo ""
+    echo "##################################################"
+    echo "# Configuring Sonar Properties"
+    echo "##################################################"
+    mkdir -p /tmp/conf
+    rm -rf /tmp/conf/*
+    cp /tmp/properties/sonar.properties.template /tmp/conf/sonar.properties.template
+    envsubst < /tmp/properties/sonar.properties.template > /tmp/conf/sonar.properties
+
+    echo ""
+    echo "##################################################"
+    echo "# Installing Sonar Plugins"
+    echo "##################################################"
+    mkdir -p /tmp/extensions/plugins
+    cd /tmp/extensions/plugins
+    {{- if .Values.plugins.install }}
+      {{- range $index, $val := .Values.plugins.install }}
+        wget {{ $val }} --no-check-certificate
+      {{- end }}
+    {{- end }}
+
+    chown -R 999 /tmp/extensions/plugins
+    chmod -R 755 /tmp/extensions/plugins
+    echo ""
+    echo "##################################################"
+    echo "# Initialisation Complete"
+    echo "##################################################"

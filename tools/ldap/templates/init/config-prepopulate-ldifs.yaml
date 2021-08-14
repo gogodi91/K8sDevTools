@@ -1,0 +1,165 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ldap-prepopulate-ldifs
+  labels:
+    app: {{ template "ldap.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  default-ppolicy.ldif: |-
+    # Define password policy
+    dn: ou=policies,{{ .Values.image.env.SLAPD_FULL_DOMAIN }}
+    # dn: ou=policies,${LDAP_ROOTDN}
+    objectClass: organizationalUnit
+    ou: policies
+
+    dn: cn=default,ou=policies,{{ .Values.image.env.SLAPD_FULL_DOMAIN }}
+    # dn: cn=default,ou=policies,${LDAP_ROOTDN}
+    objectClass: applicationProcess
+    objectClass: pwdPolicy
+    cn: default
+    pwdAllowUserChange: TRUE
+    pwdAttribute: userPassword
+    pwdCheckQuality: 1
+    # 7 days
+    pwdExpireWarning: 604800
+    pwdFailureCountInterval: 0
+    pwdGraceAuthNLimit: 0
+    pwdInHistory: 5
+    pwdLockout: TRUE
+    # 30 minutes
+    pwdLockoutDuration: 1800
+    # 180 days
+    pwdMaxAge: 15552000
+    pwdMaxFailure: 5
+    pwdMinAge: 0
+    pwdMinLength: 6
+    pwdMustChange: TRUE
+    pwdSafeModify: FALSE
+
+    dn: cn=service-users,ou=policies,{{ .Values.image.env.SLAPD_FULL_DOMAIN }}
+    # dn: cn=service-users,ou=policies,${LDAP_ROOTDN}
+    objectClass: applicationProcess
+    objectClass: pwdPolicy
+    objectClass: pwdPolicyChecker
+    cn: service-users
+    pwdAttribute: userPassword
+    pwdCheckQuality: 2
+    pwdCheckModule: check_password.so
+    pwdFailureCountInterval: 1800
+    pwdInHistory: 5
+    pwdLockout: TRUE
+    # 30 minutes
+    pwdLockoutDuration: 1800
+    # never
+    pwdMaxAge: 0
+    pwdMaxFailure: 5
+    pwdMinAge: 0
+    pwdAllowUserChange: TRUE
+
+  structure.ldif: |-
+    # Other entries
+    dn: ou=people,${SLAPD_FULL_DOMAIN}
+    objectClass: organizationalUnit
+    objectClass: top
+    ou: people
+
+    dn: cn=gerrit,ou=people,${SLAPD_FULL_DOMAIN}
+    objectClass: inetOrgPerson
+    objectClass: organizationalPerson
+    objectClass: person
+    objectClass: top
+    cn: gerrit
+    displayName: gerrit
+    givenName: gerrit
+    mail: gerrit@${SLAPD_DOMAIN}
+    sn: gerrit
+    uid: gerrit
+    userPassword: ${GERRIT_PASSWORD}
+
+    dn: cn=jenkins,ou=people,${SLAPD_FULL_DOMAIN}
+    objectClass: inetOrgPerson
+    objectClass: organizationalPerson
+    objectClass: person
+    objectClass: top
+    cn: jenkins
+    displayName: jenkins
+    givenName: jenkins
+    mail: jenkins@${SLAPD_DOMAIN}
+    sn: jenkins
+    uid: jenkins
+    userPassword: ${JENKINS_PASSWORD}
+
+    dn: cn=nexus,ou=people,${SLAPD_FULL_DOMAIN}
+    objectClass: inetOrgPerson
+    objectClass: organizationalPerson
+    objectClass: person
+    objectClass: top
+    cn: nexus
+    displayName: nexus
+    givenName: nexus
+    mail: nexus@${SLAPD_DOMAIN}
+    sn: nexus
+    uid: nexus
+    userPassword: ${INITIAL_ADMIN_PASSWORD}
+
+    dn: cn=${INITIAL_ADMIN_USER},ou=people,${SLAPD_FULL_DOMAIN}
+    objectClass: inetOrgPerson
+    objectClass: organizationalPerson
+    objectClass: person
+    objectClass: top
+    cn: ${INITIAL_ADMIN_USER}
+    displayName: Admin User
+    givenName: Admin
+    mail: ${INITIAL_ADMIN_USER}@${SLAPD_DOMAIN}
+    sn: User
+    uid: ${INITIAL_ADMIN_USER}
+    userPassword: ${INITIAL_ADMIN_PASSWORD}
+
+    dn: ou=groups,${SLAPD_FULL_DOMAIN}
+    objectClass: organizationalUnit
+    objectClass: top
+    ou: groups
+
+    dn: cn=administrators,ou=groups,${SLAPD_FULL_DOMAIN}
+    objectClass: groupOfUniqueNames
+    objectClass: top
+    cn: administrators
+    uniqueMember: cn=jenkins,ou=people,${SLAPD_FULL_DOMAIN}
+    uniqueMember: cn=${INITIAL_ADMIN_USER},ou=people,${SLAPD_FULL_DOMAIN}
+
+    dn: cn=sonar-administrators,ou=groups,${SLAPD_FULL_DOMAIN}
+    objectClass: groupOfUniqueNames
+    objectClass: top
+    cn: sonar-administrators
+    uniqueMember: cn=${INITIAL_ADMIN_USER},ou=people,${SLAPD_FULL_DOMAIN}
+
+    dn: cn=sonar-users,ou=groups,${SLAPD_FULL_DOMAIN}
+    objectClass: groupOfUniqueNames
+    objectClass: top
+    cn: sonar-users
+    uniqueMember: cn=${INITIAL_ADMIN_USER},ou=people,${SLAPD_FULL_DOMAIN}
+    uniqueMember: cn=jenkins,ou=people,${SLAPD_FULL_DOMAIN}
+
+    dn: cn=nx-admin,ou=groups,${SLAPD_FULL_DOMAIN}
+    objectClass: groupOfUniqueNames
+    objectClass: top
+    cn: nx-admin
+    uniqueMember: cn=nexus,ou=people,${SLAPD_FULL_DOMAIN}
+    uniqueMember: cn=${INITIAL_ADMIN_USER},ou=people,${SLAPD_FULL_DOMAIN}
+
+    dn: cn=nx-developer,ou=groups,${SLAPD_FULL_DOMAIN}
+    objectClass: groupOfUniqueNames
+    objectClass: top
+    cn: nx-developer
+    uniqueMember: cn=nexus,ou=people,${SLAPD_FULL_DOMAIN}
+    uniqueMember: cn=${INITIAL_ADMIN_USER},ou=people,${SLAPD_FULL_DOMAIN}
+
+    dn: cn=nx-deployment,ou=groups,${SLAPD_FULL_DOMAIN}
+    objectClass: groupOfUniqueNames
+    objectClass: top
+    cn: nx-deployment
+    uniqueMember: cn=nexus,ou=people,${SLAPD_FULL_DOMAIN}
+    uniqueMember: cn=${INITIAL_ADMIN_USER},ou=people,${SLAPD_FULL_DOMAIN}
