@@ -15,14 +15,14 @@ data:
     echo "##################################################"
     apk add --update gettext
 
-    echo ""
-    echo "##################################################"
-    echo "# Configuring Sonar Properties"
-    echo "##################################################"
-    mkdir -p /tmp/conf
-    rm -rf /tmp/conf/*
-    cp /tmp/properties/sonar.properties.template /tmp/conf/sonar.properties.template
-    envsubst < /tmp/properties/sonar.properties.template > /tmp/conf/sonar.properties
+    # echo ""
+    # echo "##################################################"
+    # echo "# Configuring Sonar Properties"
+    # echo "##################################################"
+    # mkdir -p /tmp/conf
+    # rm -rf /tmp/conf/*
+    # cp /tmp/properties/sonar.properties.template /tmp/conf/sonar.properties.template
+    # envsubst < /tmp/properties/sonar.properties.template > /tmp/conf/sonar.properties
 
     echo ""
     echo "##################################################"
