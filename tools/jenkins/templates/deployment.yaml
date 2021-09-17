@@ -55,18 +55,6 @@ spec:
         configMap:
           name: sonar-token
       {{- end }}
-      - name: load-platform
-        configMap:
-          name: load-platform
-          items:
-            - key: load-platform.xml
-              path: config.xml
-      - name: load-charts
-        configMap:
-          name: load-platform
-          items:
-            - key: load-charts.xml
-              path: config.xml
       - name: plugin-dir
         emptyDir: {}
       - name: sonar-shared-data
@@ -193,12 +181,6 @@ spec:
             mountPath: /usr/share/jenkins/ref/plugins/
           - name: sonar-shared-data
             mountPath: /tmp/sonar_shared_data/
-          - name: load-platform
-            mountPath: /usr/share/jenkins/ref/jobs/Load_Platform
-            #readOnly: true
-          - name: load-charts
-            mountPath: /usr/share/jenkins/ref/jobs/Load_Charts
-            #readOnly: true
         resources:
           requests:
             cpu: "{{ .Values.Master.resources.requests.CPU }}"
