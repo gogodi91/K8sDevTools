@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: init
+  labels:
+    app: {{ template "jenkins.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  apply_config.sh: |-
+    # Create the Jenkins SSH key
+    if [ ! -f /tmp/.ssh/id_rsa ]; then
+      mkdir -p /tmp/.ssh
+      mkdir -p /tmp/public_keys
+      cd /tmp/.ssh
+      ssh-keygen -t rsa -f 'id_rsa' -b 4096 -C "jenkins@k8sdevtools" -N '';
+      cp /tmp/.ssh/id_rsa.pub /tmp/public_keys
+    fi
+    # Install missing plugins
+    cp /var/jenkins_config/plugins.txt /var/jenkins_home;
+    rm -rf /usr/share/jenkins/ref/plugins/*.lock
+    # install-plugins.sh is now deprecated - Use https://github.com/jenkinsci/plugin-installation-manager-tool
+    /usr/local/bin/install-plugins.sh `echo $(cat /var/jenkins_home/plugins.txt)`;
+    # Copy plugins to shared volume
+    cp -n /usr/share/jenkins/ref/plugins/* /var/jenkins_plugins;
+  plugins.txt: |-
+{{- range $index, $val := .Values.Master.InstallPlugins }}
+{{ $val | indent 4 }}
+{{- end }}

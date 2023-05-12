@@ -1,0 +1,72 @@
+{{- if .Values.Master.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jenkins-pv-claim
+  labels:
+    app: {{ template "jenkins.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+{{- if (eq "-" .Values.Master.persistence.storageClass) }}
+  #storageClassName: ""
+{{- else }}
+  storageClassName: "{{ .Values.Master.persistence.storageClass }}"
+{{- end }}
+  resources:
+    requests:
+      storage: 3.5Gi
+{{- end }}
+---
+{{- if .Values.Master.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jenkins-ssh-pub-claim
+  labels:
+    app: {{ .Chart.Name }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+  #annotations:
+  #  pv.beta.kubernetes.io/gid: "1000"
+spec:
+  accessModes:
+    - ReadWriteOnce
+{{- if (eq "-" .Values.Master.persistence.storageClass) }}
+  #storageClassName: ""
+{{- else }}
+  storageClassName: "{{ .Values.Master.persistence.storageClass }}"
+{{- end }}
+  resources:
+    requests:
+      storage: 5Mi
+{{- end }}
+---
+{{- if .Values.Master.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jenkins-ssh-claim
+  labels:
+    app: {{ template "jenkins.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+  annotations:
+    pv.beta.kubernetes.io/gid: "1000"
+spec:
+  accessModes:
+    - ReadWriteOnce
+{{- if (eq "-" .Values.Master.persistence.storageClass) }}
+  #storageClassName: ""
+{{- else }}
+  storageClassName: "{{ .Values.Master.persistence.storageClass }}"
+{{- end }}
+  resources:
+    requests:
+      storage: 5Mi
+{{- end }}

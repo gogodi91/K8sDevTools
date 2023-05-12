@@ -1,0 +1,39 @@
+containerPort: 8080
+replicas: 1
+
+Master:
+  Name: jenkins-master
+  Image: "jenkins/jenkins"
+  ImageTag: "2.270"
+  ImagePullPolicy: "Always"
+  JavaOpts: "-Djenkins.install.runSetupWizard=false"
+  JenkinsOpts: ""
+  JenkinsUriPrefix: "/jenkins"
+  resources:
+    requests:
+      CPU: "250m"
+      Memory: "256Mi"
+    limits:
+      CPU: "2000m"
+      Memory: "2048Mi"
+  LDAP:
+    LDAP_ENABLED: "true"
+  SonarQube:
+    SONAR_RUNNER_VERSION: "2.9.0.670"
+  persistence:
+    enabled: true
+    storageClass: "-"
+  InstallPlugins:
+    - configuration-as-code:1.46
+    # - configuration-as-code-support:1.19
+    - credentials:2.3.14
+    - kubernetes:1.28.7
+    - ldap:2.3
+    - nexus-jenkins-plugin:3.8.20200310-130318.c482b58
+    - role-strategy:3.1
+    - sonar:2.9
+    - ssh-credentials:1.18.1
+    - ws-cleanup:0.37
+
+Slave:
+  enabled: false ## Currently experimental - In Development
