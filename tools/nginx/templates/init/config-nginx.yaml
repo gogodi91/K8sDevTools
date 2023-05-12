@@ -1,0 +1,151 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  labels:
+    app: {{ template "nginx.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  default.conf: |-
+    server {
+        listen {{ .Values.service.internalPort }};
+        charset utf-8;
+        server_name _;
+
+        auth_ldap "Forbidden";
+        auth_ldap_servers ldapserver;
+        
+        location /nginx-health {
+            access_log off;
+            return 200 "healthy";
+        }
+        
+        location / {
+            root   /usr/share/nginx/html;
+            index  index.html index.htm;
+        }
+
+        location /phpldapadmin {
+            rewrite ^/ldap-phpadmin/(.*)$ /$1 break;
+            proxy_set_header X-Real-IP  $remote_addr;
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+            proxy_pass http://{{ .Release.Name }}-ldap-admin:80;
+        }
+
+  {{- if .Values.global.tools.nexus.enable }}
+        location /nexus {
+            client_max_body_size 1G;
+            proxy_pass http://{{ .Release.Name }}-nexus:8081/nexus;
+        }
+  {{- else if .Values.tools.enable.nexus }}
+        location /nexus {
+            client_max_body_size 1G;
+            proxy_pass http://{{ .Release.Name }}-nexus:8081/nexus;
+        }
+  {{- end }}
+  
+  {{- if .Values.global.tools.jenkinsMaster.enable }}
+        location /jenkins {
+            proxy_pass http://{{ .Release.Name }}-jenkins-master:8080;
+            proxy_set_header Host $host;
+        }
+
+        location ~* ^/jenkins/scriptText$ {
+            return 401;
+        }
+  {{- else if .Values.tools.enable.jenkinsMaster }}
+        location /jenkins {
+            proxy_pass http://{{ .Release.Name }}-jenkins-master:8080;
+            proxy_set_header Host $host;
+        }
+
+        location ~* ^/jenkins/scriptText$ {
+            return 401;
+        }
+  {{- end }}
+
+  {{- if .Values.global.tools.sonarqube.enable }}
+        location /sonarqube {
+            proxy_pass http://{{ .Release.Name }}-sonarqube:9000;
+            proxy_set_header Host $host;
+        }
+  {{- else if .Values.tools.enable.sonarqube }}
+        location /sonarqube {
+            proxy_pass http://{{ .Release.Name }}-sonarqube:9000;
+            proxy_set_header Host $host;
+        }
+  {{- end }}
+
+  {{- if .Values.global.tools.gerrit.enable }}
+        location /gerrit {
+            proxy_pass http://{{ .Release.Name }}-gerrit:8080;
+            proxy_set_header Host $host;
+        }
+  {{- else if .Values.tools.enable.gerrit }}
+        location /gerrit {
+            proxy_pass http://{{ .Release.Name }}-gerrit:8080;
+            proxy_set_header Host $host;
+        }
+  {{- end }}
+    }
+  
+
+  nginx.conf.template: |-
+    user nginx www-data;
+    worker_processes 1;
+
+    error_log  /var/log/nginx/error.log debug;
+    pid        /var/cache/nginx/nginx.pid;
+
+    events {
+        worker_connections 10240;
+        multi_accept on;
+        use epoll;
+    }
+
+    http {
+        proxy_temp_path /var/cache/nginx/proxy_temp;
+        client_body_temp_path /var/cache/nginx/client_temp;
+        fastcgi_temp_path /var/cache/nginx/fastcgi_temp;
+        uwsgi_temp_path /var/cache/nginx/uwsgi_temp;
+        scgi_temp_path /var/cache/nginx/scgi_temp;
+
+        ldap_server ldapserver {
+            url ldap://${LDAP_SERVER}:${LDAP_PORT}/${LDAP_ROOTDN}?uid?sub?(objectClass=person);
+            binddn cn=${OPENLDAP_ROOT_USER},${LDAP_ROOTDN};
+            binddn_passwd ${OPENLDAP_ROOT_PASSWORD};
+            require valid_user;
+            satisfy all;
+        }
+
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+
+        log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                            '$status $body_bytes_sent "$http_referer" '
+                            '"$http_user_agent" "$http_x_forwarded_for"';
+
+        access_log  /var/log/nginx/access.log  main;
+
+        auth_ldap_cache_enabled on;
+        auth_ldap_cache_expiration_time 100;
+        auth_ldap_cache_size 1000;
+
+        server_name_in_redirect off;
+
+        sendfile   on;
+        tcp_nopush on;
+
+        keepalive_timeout 30;
+
+        # hide version info
+        server_tokens off;
+
+        # gzip  on;
+
+        include /etc/nginx/conf.d/*.conf;
+    }

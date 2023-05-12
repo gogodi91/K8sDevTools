@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ template "nginx.fullname" . }}
+  labels:
+    app: {{ template "nginx.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+  annotations:
+    {{- range $key, $value := .Values.ingress.annotations }}
+      {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  defaultBackend:
+    service:
+      name: {{ template "nginx.fullname" . }}
+      port:
+        number: {{ .Values.service.externalPort }}
+  rules:
+    - http:
+        paths:
+          - path: {{ .Values.service.relativePath }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ template "nginx.fullname" . }}
+                port:
+                  number: {{ .Values.service.externalPort }}

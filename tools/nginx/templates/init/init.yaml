@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-init
+  labels:
+    app: {{ template "nginx.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data: 
+  init.sh: |-
+    echo ""
+    echo "##################################################"
+    echo "# Initialize config"
+    echo "##################################################"
+
+    envsubst "\${LDAP_SERVER} \${LDAP_ROOTDN} \${LDAP_PORT} \${OPENLDAP_ROOT_PASSWORD} \${OPENLDAP_ROOT_USER}" < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
+    cp -R /etc/nginx/* /tmp/nginx-home
