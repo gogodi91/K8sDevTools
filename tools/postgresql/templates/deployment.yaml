@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "postgresql.fullname" . }}
+  labels:
+    app: {{ template "postgresql.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+        release: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["-c", "config_file=/etc/postgresql/postgresql.conf"]
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.service.internalPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.service.internalPort }}
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          ports:
+          {{- range $key, $value := .Values.image.containerPorts }}
+            - name: {{ $key }}
+              containerPort: {{ $value }}
+          {{- end }}
+          env:
+            {{- range $key, $value := .Values.image.env }}
+            - name: {{ $key }}
+              value: {{ $value }}
+            {{- end }}
+            - name: POSTGRES_USER
+            {{- if .Values.image.env.POSTGRES_USER }}
+              value: {{ .Values.image.env.POSTGRES_USER }}
+            {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "postgresql.fullname" . }}
+                  key: root-username
+            {{- end }}
+            - name: POSTGRES_DB
+            {{- if .Values.image.env.POSTGRES_DB }}
+              value: {{ .Values.image.env.POSTGRES_DB }}
+            {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "postgresql.fullname" . }}
+                  key: root-database
+            {{- end }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "postgresql.fullname" . }}
+                  key: root-password
+          volumeMounts:
+            {{- if .Values.persistence.enabled }}
+            - name: data
+              {{- if .Values.image.env.PGDATA }}
+              mountPath: {{ .Values.image.env.PGDATA }}
+              {{- else }}
+              mountPath: "/var/lib/postgresql/data"
+              {{- end }}
+            {{- end }}
+            - name: config
+              mountPath: /etc/postgresql
+          resources:
+            requests:
+              cpu: "{{ .Values.resources.requests.CPU }}"
+              memory: "{{ .Values.resources.requests.Memory }}"
+            limits:
+              cpu: "{{ .Values.resources.limits.CPU }}"
+              memory: "{{ .Values.resources.limits.Memory }}"
+      volumes:
+        - name: config
+          configMap:
+            name: {{ template "postgresql.name" . }}-config
+            defaultMode: 0755
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ if .Values.persistence.existingClaim }}{{ .Values.persistence.existingClaim }}{{- else }}{{ template "postgresql.fullname" . }}{{- end }}
+        {{- end  }}
