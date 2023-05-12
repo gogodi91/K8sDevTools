@@ -1,0 +1,197 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "gerrit.fullname" . }}
+  labels:
+    app: {{ template "gerrit.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.name }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.name }}
+        release: {{ .Release.Name }}
+    spec:
+      initContainers:
+      - name: "init-config"
+        image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+        imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+        command: [ "sh", "/tmp/init.sh" ]
+        envFrom:
+          - configMapRef:
+              name: ldap-properties
+          - secretRef:
+              name: gerrit-mysql
+        env:
+          {{- range $key, $value := .Values.image.initEnv }}
+          - name: {{ $key }}
+            value: {{ $value }}
+          {{- end }}
+          - name: GERRIT_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: ldap-secret
+                key: gerrit-username
+          - name: GERRIT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: ldap-secret
+                key: gerrit-password
+          - name: GERRIT_HTTP_PORT
+            value: {{ .Values.image.containerPorts.http | quote }}
+          - name: JENKINS_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: ldap-secret
+                key: jenkins-username
+          - name: JENKINS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: ldap-secret
+                key: jenkins-password
+          - name: LDAP_ADMIN
+            valueFrom:
+              secretKeyRef:
+                  name: ldap-secret
+                  key: admin-username
+          - name: LDAP_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: ldap-secret
+                key: admin-password
+          - name: DB_PORT
+            valueFrom:
+              secretKeyRef:
+                name: gerrit-mysql
+                key: mysql-port
+          - name: DB_NAME
+            valueFrom:
+              secretKeyRef:
+                name: gerrit-mysql
+                key: mysql-database
+          - name: DB_USER
+            valueFrom:
+              secretKeyRef:
+                name: gerrit-mysql
+                key: mysql-user
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: gerrit-mysql
+                key: mysql-password
+        volumeMounts:
+          - name: gerrit-etc-storage
+            mountPath: /var/gerrit/etc
+          - name: gerrit-git-storage
+            mountPath: /var/gerrit/git
+          - name: gerrit-db-storage
+            mountPath: /var/gerrit/db
+          - name: gerrit-cache-storage
+            mountPath: /var/gerrit/cache
+          - name: gerrit-index-storage
+            mountPath: /var/gerrit/index
+          - name: gerrit-init-config
+            mountPath: /tmp/init.sh
+            subPath: init.sh
+          - name: gerrit-group-config
+            mountPath: /tmp/gerrit-scripts
+          {{- if .Values.global.tools.jenkinsMaster.enable }}
+          - name: jenkins-ssh-pub
+            mountPath: /tmp/jenkins_public_keys
+          {{- end }}
+          - name: lib
+            mountPath: /var/gerrit/lib
+      containers:
+      - name: {{ .Values.name }}
+        image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+        livenessProbe:
+          httpGet:
+            path: /gerrit/
+            port: 8080
+          initialDelaySeconds: 90
+          timeoutSeconds: 5
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /gerrit/
+            port: 8080
+          initialDelaySeconds: 60
+        ports:
+          {{- range $key, $value := .Values.image.containerPorts }}
+          - name: {{ $key }}
+            containerPort: {{ $value }}
+          {{- end }}
+        env:
+        {{- range $key, $value := .Values.image.env }}
+          - name: {{ $key }}
+            value: {{ $value }}
+        {{- end }}
+        volumeMounts:
+          - name: gerrit-etc-storage
+            mountPath: /var/gerrit/etc
+          - name: gerrit-git-storage
+            mountPath: /var/gerrit/git
+          - name: gerrit-db-storage
+            mountPath: /var/gerrit/db
+          - name: gerrit-cache-storage
+            mountPath: /var/gerrit/cache
+          - name: gerrit-index-storage
+            mountPath: /var/gerrit/index
+      volumes:
+        - name: gerrit-init-config
+          configMap:
+            name: gerrit-init-config
+            defaultMode: 0755
+        - name: gerrit-group-config
+          configMap:
+            name: gerrit-group-config
+            defaultMode: 0755
+        - name: lib
+          emptyDir: {}
+        {{- if .Values.global.tools.jenkinsMaster.enable }}
+        - name: jenkins-ssh-pub
+          persistentVolumeClaim:
+            claimName: jenkins-ssh-pub-claim
+        {{- end }}
+        - name: gerrit-etc-storage
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: gerrit-etc-storage
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: gerrit-git-storage
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: gerrit-git-storage
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: gerrit-db-storage
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: gerrit-db-storage
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: gerrit-cache-storage
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: gerrit-cache-storage
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: gerrit-index-storage
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: gerrit-index-storage
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

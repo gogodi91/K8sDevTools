@@ -1,0 +1,8 @@
+apiVersion: v1
+name: gerrit
+description: "Gerrit chart"
+version: 0.1.0
+keywords:
+  - gerrit
+  - scm
+  - git

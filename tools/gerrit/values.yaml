@@ -1,0 +1,55 @@
+name: gerrit
+
+replicaCount: 1
+restartPolicy: Always
+
+image:
+  name: gerritcodereview/gerrit
+  tag: "3.1.4"
+  pullPolicy: "Always"
+  containerPorts:
+    http: 8080
+    ssh: 29418
+  initEnv:
+    GERRIT_SITE: "/var/gerrit"
+    HTTPD_LISTENURL: "proxy-http://*:8080/gerrit/"
+    CANONICAL_WEB_URL: "http://gerrit:8080/gerrit/"
+    AUTH_TYPE: "LDAP"
+    GIT_BASIC_AUTH_POLICY: "HTTP_LDAP"
+    AUTH_LOGOUTURL: "http://gerrit:8080/gerrit/"
+    LDAP_PROTOCOL: "ldap"
+    DATABASE_TYPE: "mysql"
+    DB_HOSTNAME: "gerrit-mysql"
+  env:
+    CANONICAL_WEB_URL: "http://gerrit:8080/gerrit/"
+
+gerrit_roles:
+  Administrators:
+    - "ldap%3Acn%3Dadministrators%2Cou%3Dgroups%2Cdc%3Dldap%2Cdc%3Dexample%2Cdc%3Dorg"
+  Developers:
+    - "ldap%3Acn%3Dnx%2Ddeveloper%2Cou%3Dgroups%2Cdc%3Dldap%2Cdc%3Dexample%2Cdc%3Dorg"
+    - "ldap%3Acn%3Dsonar%2Dusers%2Cou%3Dgroups%2Cdc%3Dldap%2Cdc%3Dexample%2Cdc%3Dorg"
+    - "ldap%3Acn%3Dsonar%2Dadministrators%2Cou%3Dgroups%2Cdc%3Dldap%2Cdc%3Dexample%2Cdc%3Dorg"
+  Readers:
+    - "ldap%3Acn%3Dsonar%2Dusers%2Cou%3Dgroups%2Cdc%3Dldap%2Cdc%3Dexample%2Cdc%3Dorg"
+
+service:
+  internalPort: 8080
+  externalPort: 8080
+  relativePath: '/'
+
+persistence:
+  enabled: true
+  size:
+    etc: 5Gi
+    git: 10Gi
+    db: 5Gi
+    cache: 1Gi
+    index: 5Gi
+  storageClass: "-"
+
+ingress:
+  host: ""
+  annotations:
+    ingress.kubernetes.io/rewrite-target: /
+    ingress.kubernetes.io/whitelist-source-range: 0.0.0.0/0

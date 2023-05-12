@@ -1,0 +1,54 @@
+dependencies:
+  - name: ldap
+    version: 0.1.0
+    repository: "file://ldap/"
+    condition: global.tools.ldap.enable
+  - name: ldap-admin
+    version: 0.1.0
+    repository: "file://ldap-admin/"
+    condition: global.tools.ldap.enable
+  - name: nginx
+    version: 0.1.0
+    repository: "file://nginx/"
+    condition: global.tools.nginx.enable
+  - name: nexus
+    version: 0.1.0
+    repository: "file://nexus/"
+    condition: global.tools.nexus.enable
+  - name: jenkins-master
+    version: 0.0.1
+    repository: "file://jenkins/"
+    condition: global.tools.jenkinsMaster.enable
+  # - name: mysql
+  #   alias: sonarmysql
+  #   version: 1.6.3
+  #   repository: https://charts.helm.sh/stable
+  #   condition: global.tools.sonarqube
+  - name: mysql
+    alias: gerritmysql
+    version: 1.6.3
+    repository: https://charts.helm.sh/stable
+    condition: global.tools.gerrit.enable
+  - name: postgresql
+    alias: sonarqube-postgresql
+    version: 0.1.0
+    repository: "file://postgresql/"
+    condition: global.tools.sonarqube.postgresql
+  - name: postgresql
+    alias: gerrit-postgresql
+    version: 0.1.0
+    repository: "file://postgresql/"
+    condition: global.tools.gerrit.postgresql
+  # - name: elasticsearch
+  #   alias: sonarelasticsearch
+  #   version: 1.6.3
+  #   repository: https://charts.helm.sh/stable
+  #   condition: global.tools.sonarqube.elasticsearch
+  - name: sonarqube
+    version: 0.1.0
+    repository: "file://sonarqube/"
+    condition: global.tools.sonarqube.enable
+  - name: gerrit
+    version: 0.1.0
+    repository: "file://gerrit/"
+    condition: global.tools.gerrit.enable

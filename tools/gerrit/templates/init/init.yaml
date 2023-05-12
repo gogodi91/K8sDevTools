@@ -1,0 +1,189 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gerrit-init-config
+  labels:
+    app: {{ template "gerrit.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  init.sh: |-
+    echo "##################################################"
+    echo "# Initialize default config"
+    echo "##################################################"
+    if [ -z "$(ls -A "${GERRIT_SITE}/etc")" ]; then
+      
+      # If running init script on fresh installation
+      echo "First time initialize gerrit..."
+      java -jar ${GERRIT_SITE}/bin/gerrit.war init --batch --no-auto-start -d ${GERRIT_SITE}
+      
+      rm -rf "${GERRIT_SITE}/git"
+
+      # Add site extensions
+      cp -uR ${GERRIT_HOME}/site_ext/* ${GERRIT_SITE}/
+      ##################################################
+      # Customize Gerrit config
+      ##################################################
+      #Section gerrit
+      [ -z "${REPO_PATH}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" gerrit.basePath "${REPO_PATH}"
+      [ -z "${SCREEN_UI}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" gerrit.changeScreen "${SCREEN_UI}"
+
+      # ##################################################
+      # # Database configuration
+      # ##################################################
+      if [ "${DATABASE_TYPE}" = 'postgresql' ]; then
+        git config -f "${GERRIT_SITE}/etc/gerrit.config" database.type "${DATABASE_TYPE}"
+        [ -z "${DB_PORT_5432_TCP_ADDR}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" database.hostname "${DB_PORT_5432_TCP_ADDR}"
+        [ -z "${DB_PORT_5432_TCP_PORT}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" database.port "${DB_PORT_5432_TCP_PORT}"
+        [ -z "${DB_ENV_POSTGRES_DB}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" database.database "${DB_ENV_POSTGRES_DB}"
+        [ -z "${DB_ENV_POSTGRES_USER}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" database.username "${DB_ENV_POSTGRES_USER}"
+        [ -z "${DB_ENV_POSTGRES_PASSWORD}" ] || git config -f "${GERRIT_SITE}/etc/secure.config" database.password "${DB_ENV_POSTGRES_PASSWORD}"
+      elif [ "${DATABASE_TYPE}" = 'mysql' ]; then
+        curl -o "/tmp/mysql-connector-java-8.0.16.tar.gz" -L https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-8.0.16.tar.gz
+        tar -zxf /tmp/mysql-connector-java-8.0.16.tar.gz -C /tmp mysql-connector-java-8.0.16/mysql-connector-java-8.0.16.jar 
+        mv /tmp/mysql-connector-java-8.0.16/mysql-connector-java-8.0.16.jar ${GERRIT_SITE}/lib/mysql-connector-java-8.0.16.jar
+        git config -f "${GERRIT_SITE}/etc/gerrit.config" database.type "${DATABASE_TYPE}"
+        [ -z "${DB_HOSTNAME}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" database.hostname "${DB_HOSTNAME}"
+        [ -z "${DB_PORT}}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" database.port "${DB_PORT}"
+        [ -z "${DB_NAME}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" database.database "${DB_NAME}"
+        [ -z "${DB_USER}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" database.username "${DB_USER}"
+        [ -z "${DB_PASSWORD}" ] || git config -f "${GERRIT_SITE}/etc/secure.config" database.password "${DB_PASSWORD}"
+      fi
+
+      # ##################################################
+      # # Authentication configuration
+      # ##################################################
+      [ -z "${AUTH_LOGOUTURL}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" auth.logoutUrl "${AUTH_LOGOUTURL}"
+      [ -z "${AUTH_TRUST_CONTAINER_AUTH}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" auth.trustContainerAuth "${AUTH_TRUST_CONTAINER_AUTH}"
+
+      #Section ldap
+      if [ "${AUTH_TYPE}" = 'LDAP' ] || [ "${AUTH_TYPE}" = 'HTTP_LDAP' ]; then
+        echo ""
+        echo "##################################################"
+        echo "# Auth type is ${AUTH_TYPE}"
+        echo "##################################################"
+        
+        LDAP_USERNAME="cn=${LDAP_ADMIN},${LDAP_USER_BASE_DN},${LDAP_ROOTDN}"
+
+        git config -f "${GERRIT_SITE}/etc/gerrit.config" auth.type "${AUTH_TYPE}"
+        git config -f "${GERRIT_SITE}/etc/gerrit.config" auth.gitBasicAuth true
+        git config -f "${GERRIT_SITE}/etc/gerrit.config" auth.gitBasicAuthPolicy "${GIT_BASIC_AUTH_POLICY}"
+        [ -z "${LDAP_SERVER}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.server "${LDAP_PROTOCOL}://${LDAP_SERVER}"
+        [ -z "${LDAP_SSLVERIFY}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.sslVerify "${LDAP_SSLVERIFY}"
+        [ -z "${LDAP_GROUPSVISIBLETOALL}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.groupsVisibleToAll "${LDAP_GROUPSVISIBLETOALL}"
+        [ -z "${LDAP_USERNAME}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.username "${LDAP_USERNAME}"
+        [ -z "${LDAP_PASSWORD}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.password "${LDAP_PASSWORD}"
+        [ -z "${LDAP_REFERRAL}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.referral "${LDAP_REFERRAL}"
+        [ -z "${LDAP_READTIMEOUT}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.readTimeout "${LDAP_READTIMEOUT}"
+        [ -z "${LDAP_USER_BASE_DN}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.accountBase "${LDAP_USER_BASE_DN},${LDAP_ROOTDN}"
+        [ -z "${LDAP_ACCOUNTSCOPE}" ] || git config -f  "${GERRIT_SITE}/etc/gerrit.config" ldap.accountScope "${LDAP_ACCOUNTSCOPE}"
+        [ -z "${LDAP_ACCOUNTPATTERN_GERRIT}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.accountPattern "${LDAP_ACCOUNTPATTERN_GERRIT}"
+        [ -z "${LDAP_ACCOUNTFULLNAME}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.accountFullname "${LDAP_ACCOUNTFULLNAME}"
+        [ -z "${LDAP_ACCOUNTEMAILADDRESS}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.accountEmailAddress "${LDAP_ACCOUNTEMAILADDRESS}"
+        [ -z "${LDAP_ACCOUNTSSHUSERNAME}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.accountSshUsername "${LDAP_ACCOUNTSSHUSERNAME}"
+        [ -z "${LDAP_ACCOUNTMEMBERFIELD}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.accountMemberField "${LDAP_ACCOUNTMEMBERFIELD}"
+        [ -z "${LDAP_FETCHMEMBEROFEAGERLY}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.fetchMemberOfEagerly "${LDAP_FETCHMEMBEROFEAGERLY}"
+        [ -z "${LDAP_GROUP_BASE_DN}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.groupBase "${LDAP_GROUP_BASE_DN},${LDAP_ROOTDN}"
+        [ -z "${LDAP_GROUPSCOPE}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.groupScope "${LDAP_GROUPSCOPE}"
+        [ -z "${LDAP_GROUPPATTERN_GERRIT}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.groupPattern "${LDAP_GROUPPATTERN_GERRIT}"
+        [ -z "${LDAP_GROUPMEMBERPATTERN_GERRIT}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.groupMemberPattern "${LDAP_GROUPMEMBERPATTERN_GERRIT}"
+        [ -z "${LDAP_GROUPNAME}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.groupname "${LDAP_GROUPNAME}"
+        [ -z "${LDAP_LOCALUSERNAMETOLOWERCASE}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.localUsernameToLowerCase "${LDAP_LOCALUSERNAMETOLOWERCASE}"
+        [ -z "${LDAP_AUTHENTICATION}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.authentication "${LDAP_AUTHENTICATION}"
+        [ -z "${LDAP_USECONNECTIONPOOLING}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.useConnectionPooling "${LDAP_USECONNECTIONPOOLING}"
+        [ -z "${LDAP_CONNECTTIMEOUT}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" ldap.connectTimeout "${LDAP_CONNECTTIMEOUT}"
+      fi
+
+      ##################################################
+      # Java configuration
+      ##################################################
+      # section container
+      [ -z "${JAVA_HEAPLIMIT}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" container.heapLimit "${JAVA_HEAPLIMIT}"
+      [ -z "${JAVA_OPTIONS}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" container.javaOptions "${JAVA_OPTIONS}"
+      [ -z "${JAVA_SLAVE}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" container.slave "${JAVA_SLAVE}"
+
+      ##################################################
+      # Email configuration
+      ##################################################
+      #Section sendemail
+      if [ -z "${SMTP_SERVER}" ]; then
+        git config -f "${GERRIT_SITE}/etc/gerrit.config" sendemail.enable false
+      else
+        git config -f "${GERRIT_SITE}/etc/gerrit.config" sendemail.smtpServer "${SMTP_SERVER}"
+      fi
+
+      ##################################################
+      # Plugin configuration
+      ##################################################
+      #Section plugins
+      git config -f "${GERRIT_SITE}/etc/gerrit.config" plugins.allowRemoteAdmin true
+
+      ##################################################
+      # HTTP configuration
+      ##################################################
+      #Section httpd
+      [ -z "${HTTPD_LISTENURL}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" httpd.listenUrl "${HTTPD_LISTENURL}"
+
+      #Section user
+      [ -z "${USER_NAME}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" user.name "${USER_NAME}"
+      [ -z "${USER_EMAIL}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" user.email "${USER_EMAIL}"
+      
+      #Section gerrit
+      [ -z "${REPO_PATH}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" gerrit.basePath "${REPO_PATH}"
+      [ -z "${SCREEN_UI}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" gerrit.changeScreen "${SCREEN_UI}"
+      
+      # Substitute values into and copy over gerrit config file
+      
+
+      # ##################################################
+      # # Authentication configuration
+      # ##################################################
+      [ -z "${AUTH_LOGOUTURL}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" auth.logoutUrl "${AUTH_LOGOUTURL}"
+      [ -z "${AUTH_TRUST_CONTAINER_AUTH}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" auth.trustContainerAuth "${AUTH_TRUST_CONTAINER_AUTH}"
+
+      ##################################################
+      # Java configuration
+      ##################################################
+      # section container
+      [ -z "${JAVA_HEAPLIMIT}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" container.heapLimit "${JAVA_HEAPLIMIT}"
+      [ -z "${JAVA_OPTIONS}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" container.javaOptions "${JAVA_OPTIONS}"
+      [ -z "${JAVA_SLAVE}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" container.slave "${JAVA_SLAVE}"
+
+      ##################################################
+      # Email configuration
+      ##################################################
+      #Section sendemail
+      if [ -z "${SMTP_SERVER}" ]; then
+        git config -f "${GERRIT_SITE}/etc/gerrit.config" sendemail.enable false
+      else
+        git config -f "${GERRIT_SITE}/etc/gerrit.config" sendemail.smtpServer "${SMTP_SERVER}"
+      fi
+
+      ##################################################
+      # Plugin configuration
+      ##################################################
+      #Section plugins
+      git config -f "${GERRIT_SITE}/etc/gerrit.config" plugins.allowRemoteAdmin true
+    
+    else
+      echo "${GERRIT_SITE}/etc has already been initialized in this volume"
+    fi
+    cp ${GERRIT_SITE}/etc/gerrit.config ${GERRIT_SITE}/etc/gerrit.config.init
+    echo "Upgrading gerrit..."
+    java -jar "${GERRIT_SITE}/bin/gerrit.war" init --batch -d "${GERRIT_SITE}"
+    if [ "${REINDEX}" = "TRUE" ]; then
+      java -jar "${GERRIT_SITE}/bin/gerrit.war" reindex --recheck-mergeable -d "${GERRIT_SITE}"
+    fi
+    [ -z "${HTTPD_LISTENURL}" ] || git config -f "${GERRIT_SITE}/etc/gerrit.config" httpd.listenUrl "${HTTPD_LISTENURL}"
+    if [ $? -eq 0 ]; then
+      echo "Upgrading is OK."
+    else
+      echo "Something wrong..."
+      cat "${GERRIT_SITE}/logs/error_log"
+    fi
+
+    # Running Gerrit in the background
+    sh ${GERRIT_SITE}/bin/gerrit.sh run -d ${GERRIT_SITE} 2>&1 &
+
+    /tmp/gerrit-scripts/create-users-and-groups.sh
