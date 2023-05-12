@@ -234,7 +234,7 @@ data:
     # USER MAPPING
 
     # Distinguished Name (DN) of the root node in LDAP from which to search for users (mandatory)
-    ldap.user.baseDn=${LDAP_USER_BASE_DN},${LDAP_ROOTDN}
+    ldap.user.baseDn=${env:LDAP_USER_BASE_DN},${env:LDAP_ROOTDN}
     # ##########
 
     # LDAP user request. (default: (&(objectClass=inetOrgPerson)(uid={login})) )
@@ -242,17 +242,17 @@ data:
     # ##########
 
     # Attribute in LDAP defining the user’s real name. (default: cn)
-    ldap.user.realNameAttribute=${LDAP_DISPLAY_NAME_ATTRIBUTE_NAME}
+    ldap.user.realNameAttribute=${env:LDAP_DISPLAY_NAME_ATTRIBUTE_NAME}
     # ##########
 
     # Attribute in LDAP defining the user’s email. (default: mail)
-    ldap.user.emailAttribute=${LDAP_MAIL_ADDRESS_ATTRIBUTE_NAME}
+    ldap.user.emailAttribute=${env:LDAP_MAIL_ADDRESS_ATTRIBUTE_NAME}
     # ##########
 
     # GROUP MAPPING
 
     # Distinguished Name (DN) of the root node in LDAP from which to search for groups. (optional, default: empty)
-    ldap.group.baseDn=${LDAP_GROUP_BASE_DN},${LDAP_ROOTDN}
+    ldap.group.baseDn=${env:LDAP_GROUP_BASE_DN},${env:LDAP_ROOTDN}
     # ##########
 
     # LDAP group request (default: (&(objectClass=groupOfUniqueNames)(uniqueMember={dn})) )
