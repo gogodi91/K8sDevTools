@@ -1,0 +1,85 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: init-nexus-ldap
+  labels:
+    app: {{ template "nexus.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+  ldap_configuration_schema.json: |-
+    {
+      "name": "LDAP_Configuration",
+      "protocol": "ldap",
+      "useTrustStore": false,
+      "host": "##LDAP_SERVER##",
+      "port": ##LDAP_PORT##,
+      "searchBase": "##LDAP_ROOTDN##",
+      "authScheme": "SIMPLE",
+      "authUsername": "cn=##LDAP_ADMIN_USERNAME##,##LDAP_ROOTDN##",
+      "connectionTimeoutSeconds": 30,
+      "connectionRetryDelaySeconds": 300,
+      "maxIncidentsCount": 3,
+      "userLdapFilter": "",
+      "userBaseDn": "##LDAP_USER_BASE_DN##",
+      "userSubtree": true,
+      "userObjectClass": "##LDAP_USER_OBJECT_CLASS##",
+      "userIdAttribute": "##LDAP_USER_ID_ATTRIBUTE_NAME##",
+      "userRealNameAttribute": "cn",
+      "userEmailAddressAttribute": "##LDAP_MAIL_ADDRESS_ATTRIBUTE_NAME##",
+      "userPasswordAttribute": null,
+      "ldapGroupsAsRoles": true,
+      "groupType": "STATIC",
+      "groupBaseDn": "##LDAP_GROUP_BASE_DN##",
+      "groupSubtree": true,
+      "groupObjectClass": "##LDAP_GROUPOBJECT_CLASS##",
+      "groupIdAttribute": "cn",
+      "groupMemberAttribute": "##LDAP_GROUPMEMBER_ATRRIBUTE_NAME##",
+      "groupMemberFormat": "${dn}",
+      "userMemberOfAttribute": null,
+      "authPassword": "##LDAP_ADMIN_PASSWORD##"
+    }
+  
+  ldap_administrator_role_schema.json: |-
+    {
+      "id": "administrators",
+      "name": "nx-admin-ldap",
+      "description": "Administrator Role (LDAP)",
+      "privileges": [
+          "nx-all"
+      ],
+      "roles": [
+          "nx-admin"
+      ]
+    }
+
+  ldap_developer_role_schema.json: |-
+    {
+      "id": "nx-developer",
+      "name": "nx-developer",
+      "description": "Nexus Developer Role",
+      "privileges": [
+          "nx-roles-update", 
+          "nx-ldap-update"
+      ],
+      "roles": [
+          "nx-admin",
+          "nx-anonymous"
+      ]
+    }
+  
+  ldap_deployment_role_schema.json: |-
+    {
+        "id": "nx-deployment",
+        "name": "nx-deployment",
+        "description": "Nexus Deployment Role",
+        "privileges": [
+            "nx-ldap-all",
+            "nx-roles-all"
+        ],
+        "roles": [
+            "nx-admin"
+        ]
+    }

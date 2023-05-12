@@ -1,0 +1,79 @@
+replicaCount: 1
+restartPolicy: Always
+
+# Evaluated by the post-install hook
+sleepyTime: "10"
+
+image:
+  name: sonarqube
+  repository: sonarqube
+  containerPorts:
+    http: 9000
+    httpport: 9092
+  tag: 7.9-community
+  pullPolicy: Always
+  env:
+
+service:
+  name: 'sonarqube-app'
+  internalPort: "9000"
+  externalPort: "9000"
+  annotations:
+
+persistence:
+  enabled: false
+  accessMode: ReadWriteOnce
+  size: 1Gi
+  storageClass: 
+
+resources:
+  requests:
+    CPU: "250m"
+    Memory: "256Mi"
+  limits:
+    CPU: "1000m"
+    Memory: "2048Mi"
+
+postgresql:
+  schema: 
+  port: 5432
+
+mysql:
+  ssl:
+    enabled: false
+  mysqlUser: sonar
+  service:
+    port: 3306
+  mysqlDatabase: sonardb
+
+plugins:
+  install:
+    # - https://sonarsource.bintray.com/Distribution/sonar-javascript-plugin/sonar-javascript-plugin-2.16.0.2922.jar
+    # - https://sonarsource.bintray.com/Distribution/sonar-java-plugin/sonar-java-plugin-5.1.1.13214.jar
+    - https://binaries.sonarsource.com/Distribution/sonar-ldap-plugin/sonar-ldap-plugin-2.2.0.608.jar
+    - https://binaries.sonarsource.com/Distribution/sonar-python-plugin/sonar-python-plugin-2.8.0.6204.jar
+    - https://binaries.sonarsource.com/Distribution/sonar-scm-svn-plugin/sonar-scm-svn-plugin-1.9.0.1295.jar
+    - https://binaries.sonarsource.com/Distribution/sonar-typescript-plugin/sonar-typescript-plugin-2.1.0.4359.jar
+    - https://binaries.sonarsource.com/Distribution/sonar-flex-plugin/sonar-flex-plugin-2.5.1.1831.jar
+    - https://binaries.sonarsource.com/Distribution/sonar-java-plugin/sonar-java-plugin-6.3.2.22818.jar
+    - https://binaries.sonarsource.com/Distribution/sonar-javascript-plugin/sonar-javascript-plugin-6.2.2.13315.jar
+    - https://binaries.sonarsource.com/Distribution/sonar-scm-git-plugin/sonar-scm-git-plugin-1.12.1.2064.jar
+    - https://binaries.sonarsource.com/Distribution/sonar-php-plugin/sonar-php-plugin-3.3.0.5166.jar
+    - https://binaries.sonarsource.com/Distribution/sonar-xml-plugin/sonar-xml-plugin-2.0.1.2020.jar
+    - https://binaries.sonarsource.com/Distribution/sonar-csharp-plugin/sonar-csharp-plugin-8.6.1.17183.jar
+    
+    # - http://downloads.sonarsource.com/plugins/org/codehaus/sonar-plugins/sonar-ldap-plugin/1.4/sonar-ldap-plugin-1.4.jar
+    # - https://github.com/SonarQubeCommunity/sonar-build-breaker/releases/download/1.1/sonar-build-breaker-plugin-1.1.jar
+    # - http://downloads.sonarsource.com/plugins/org/codehaus/sonar-plugins/scm-activity/sonar-scm-activity-plugin/1.8/sonar-scm-activity-plugin-1.8.jar
+    # - https://github.com/checkstyle/sonar-checkstyle/releases/download/4.8/checkstyle-sonar-plugin-4.8.jar
+    # - https://github.com/SonarQubeCommunity/sonar-css/releases/download/2.1/sonar-css-plugin-2.1.jar
+    # - http://downloads.sonarsource.com/plugins/org/codehaus/sonar-plugins/sonar-motion-chart-plugin/1.7/sonar-motion-chart-plugin-1.7.jar
+    # - https://github.com/VinodAnandan/sonar-pitest/releases/download/v0.9/sonar-pitest-plugin-0.9.jar
+    # - http://downloads.sonarsource.com/plugins/org/codehaus/sonar-plugins/java/sonar-pmd-plugin/2.4.1/sonar-pmd-plugin-2.4.1.jar
+    # - http://downloads.sonarsource.com/plugins/org/codehaus/sonar-plugins/sonar-timeline-plugin/1.4/sonar-timeline-plugin-1.4.jar
+    # - https://sonarsource.bintray.com/Distribution/sonar-web-plugin/sonar-web-plugin-2.5.0.476.jar
+    # - http://sonarsource.bintray.com/Distribution/sonar-xml-plugin/sonar-xml-plugin-1.4.1.jar
+    # - https://sonarsource.bintray.com/Distribution/sonar-groovy-plugin/sonar-groovy-plugin-1.4.jar
+    # - http://downloads.sonarsource.com/plugins/org/codehaus/sonar-plugins/sonar-issues-report-plugin/1.3/sonar-issues-report-plugin-1.3.jar
+    # - http://downloads.sonarsource.com/plugins/org/codehaus/sonar-plugins/sonar-tab-metrics-plugin/1.4.1/sonar-tab-metrics-plugin-1.4.1.jar
+    # - https://github.com/spotbugs/sonar-findbugs/releases/download/3.7.0/sonar-findbugs-plugin-3.7.0.jar

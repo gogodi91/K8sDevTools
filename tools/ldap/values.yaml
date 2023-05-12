@@ -1,0 +1,35 @@
+replicaCount: 1
+restartPolicy: Always
+
+# Evaluated by the post-install hook
+sleepyTime: "10"
+
+name: ldap
+
+image:
+  name: "rbhadti/openldap"
+  tag: "2.4.44"
+  pullPolicy: "Always"
+  containerPorts:
+    ldap: 8389
+    ldaps: 8686
+  env:
+    SLAPD_DOMAIN: ldap.example.org
+    SLAPD_FULL_DOMAIN: dc=ldap,dc=example,dc=org
+    SLAPD_ADDITIONAL_MODULES: "ppolicy"
+    SLAPD_ADDITIONAL_SCHEMAS: "ppolicy"
+
+admin:
+  username: "devtools-admin"
+  password: "default"
+
+service:
+  internalPort: 8389 
+  externalPort: 389
+
+persistence:
+  enabled: true 
+  accessMode: ReadWriteOnce
+  size: 400Mi
+  storageClassLDAP: "standard"
+  storageClassSLAPD: "standard"

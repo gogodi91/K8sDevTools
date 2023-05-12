@@ -1,0 +1,174 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "sonarqube.fullname" . }}
+  labels:
+    app: {{ template "sonarqube.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+        release: {{ .Release.Name }}
+    spec:
+      securityContext:
+        fsGroup: 999
+      initContainers:
+        - name: install-plugins
+          image: alpine:3.9
+          envFrom:
+          - configMapRef:
+              name: ldap-properties
+          env:
+            {{- range $key, $value := .Values.image.env }}
+            - name: {{ $key }}
+              value: {{ $value }}
+            {{- end }}
+            - name: 'OPENLDAP_ROOT_PASSWORD'
+              valueFrom:
+                secretKeyRef:
+                  name: "ldap-secret"
+                  key: "ldap-password"
+            - name: 'OPENLDAP_ROOT_USER'
+              valueFrom:
+                secretKeyRef:
+                  name: "ldap-secret"
+                  key: "ldap-manager-username"
+            # - name: SONARQUBE_JDBC_USERNAME
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: {{ .Release.Name }}-sonar-mysql
+            #       key: mysql-user
+            # - name: SONARQUBE_JDBC_PASSWORD
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: {{ .Release.Name }}-sonar-mysql
+            #       key: mysql-password
+            # - name: SONARQUBE_JDBC_DATABASE
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: {{ .Release.Name }}-sonar-mysql
+            #       key: mysql-database
+            # - name: SONARQUBE_JDBC_PORT
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: {{ .Release.Name }}-sonar-mysql
+            #       key: mysql-port
+            # - name: SONARQUBE_JDBC_URL
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: {{ .Release.Name }}-sonar-mysql
+            #       key: sonarqube-jdbc-url
+          command: ["sh", "/tmp/init/init.sh"]
+          volumeMounts:
+            - name: init
+              mountPath: /tmp/init/
+            - name: conf
+              mountPath: /tmp/conf/
+            - name: sonar-properties
+              mountPath: /tmp/properties/
+            - name: sonarqube
+              mountPath: /tmp/extensions
+              subPath: extensions
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          livenessProbe:
+            httpGet:
+              path: /sonarqube/
+              port: http
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /sonarqube/
+              port: http
+            initialDelaySeconds: 30
+          ports:
+          {{- range $key, $value := .Values.image.containerPorts }}
+            - name: {{ $key }}
+              containerPort: {{ $value }}
+          {{- end }}
+          env:
+            # {{- range $key, $value := .Values.image.env }}
+            # - name: {{ $key }}
+            #   value: {{ $value }}
+            # {{- end }}
+            {{- if .Values.global.tools.sonarqube.postgresql }}
+            - name: SONARQUBE_JDBC_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "sonarqube.fullname" . }}-postgresql
+                  key: root-username
+            - name: SONARQUBE_JDBC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "sonarqube.fullname" . }}-postgresql
+                  key: root-password
+            - name: SONARQUBE_JDBC_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "sonarqube.fullname" . }}-postgresql
+                  key: root-database
+            - name: POSTGRESQL_PORT
+              value: "{{ .Values.postgresql.port }}"
+            - name: POSTGRESQL_SCHEMA
+              value: {{ if .Values.postgresql.schema }}{{ .Values.postgresql.schema }}{{- else }}"public"{{- end }}
+            {{- end }}
+            # - name: SONARQUBE_JDBC_URL
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: {{ .Release.Name }}-sonar-mysql
+            #       key: sonarqube-jdbc-url
+          volumeMounts:
+            # - mountPath: /opt/sonarqube/conf
+            #   name: sonarqube
+            #   subPath: conf
+            - name: conf
+              mountPath: /opt/sonarqube/conf
+            - name: sonarqube
+              mountPath: /opt/sonarqube/data
+              subPath: data
+            - name: sonarqube
+              mountPath: /opt/sonarqube/logs
+              subPath: logs
+            - name: sonarqube
+              mountPath: /opt/sonarqube/extensions
+              subPath: extensions
+          resources:
+            requests:
+              cpu: "{{ .Values.resources.requests.CPU }}"
+              memory: "{{ .Values.resources.requests.Memory }}"
+            limits:
+              cpu: "{{ .Values.resources.limits.CPU }}"
+              memory: "{{ .Values.resources.limits.Memory }}"
+      volumes:
+        - name: init
+          configMap:
+            name: sonarqube-init
+            defaultMode: 0755
+        - name: conf
+          persistentVolumeClaim:
+            claimName: sonarqube-config
+          # emptyDir: {}
+        - name: sonar-properties
+          configMap:
+            name: sonar-properties
+            defaultMode: 0755
+        - name: sonarqube
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ if .Values.persistence.existingClaim }}{{ .Values.persistence.existingClaim }}{{- else }}{{ .Chart.Name }}{{- end }}
+          {{- else }}
+          emptyDir: {}
+          {{- end  }}

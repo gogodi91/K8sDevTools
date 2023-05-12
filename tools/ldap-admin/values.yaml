@@ -1,0 +1,34 @@
+---
+name: ldap-admin
+
+replicaCount: 1
+restartPolicy: Always
+
+# Evaluated by the post-install hook
+sleepyTime: "10"
+
+image:
+  name: "osixia/phpldapadmin"
+  tag: "0.7.1"
+  pullPolicy: "Always"
+  ldapAdminContext: "/phpldapadmin"
+  containerPorts:
+    http: 80
+    https: 443
+
+## LDAP Service Details
+ldap:
+  host: "#PYTHON2BASH:[{'ldap': [{'server': [{'tls': False}]}]}]"
+
+resources:
+  requests:
+    cpu: "50m"
+    memory: "128Mi"
+  limits:
+    cpu: "200m"
+    memory: "512Mi"
+
+service:
+  internalPort: 80
+  externalPort: 80
+  relativePath: "/phpldapadmin"

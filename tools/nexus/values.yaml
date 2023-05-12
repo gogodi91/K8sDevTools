@@ -1,0 +1,40 @@
+---
+name: nexus
+
+replicaCount: 1
+restartPolicy: Always
+
+image:
+  name: "sonatype/nexus3"
+  tag: "3.22.1"
+  pullPolicy: "Always"
+  NexusContext: "nexus"
+  containerPorts:
+    http: 8081
+  initEnv:
+    LDAP_CONFIGURATION_PATH: "/opt/sonatype/ldap-config"
+    NEXUS_PORT: "8081"
+    NEXUS_CONTEXT: "nexus"
+  env:
+    NEXUS_PORT: "8081"
+    NEXUS_CONTEXT: "nexus"
+
+resources:
+  requests:
+    cpu: "150m"
+    memory: "256Mi"
+  limits:
+    cpu: "1000m"
+    memory: "2048Mi"
+
+service:
+  internalPort: 8081
+  externalPort: 8081
+  annotations:
+
+persistence:
+  enabled: true
+  accessMode: ReadWriteMany
+  size: 20Gi
+  storageClass: "standard"
+  volumeMode: Filesystem
