@@ -1,0 +1,7 @@
+apiVersion: v1
+name: nexus
+description: "nexus"
+version: 0.1.0
+keywords:
+  - nexus
+  - artifact-store
